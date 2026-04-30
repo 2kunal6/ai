@@ -1,0 +1,42 @@
+## Introduction
+- used to build AI agents
+- AI agents can take actions autonomously on our behalf like reading an email, searching the web and then take further actions based on the outcomes of these actions.  This loop happens continuously until the specified goal is reached.
+- features:
+  - agent = create_agent(model_name, tools=[..], system_prompt="")
+    - we can provide the tool's names in the system_prompt but if the tool_name and tool_descriptions are good then the agent can find the right tool automatically
+  - it supports many models out of the box, but it's model-agnostic
+  - interact with chat model
+    - for newer models we might have to use the provider's langchain library like langchain_google_genai
+  - use system prompt:
+    - they assign a role to the agent. For example, what's the smell of air has no answer but we can assign a sci-fi story teller role to the agent and then the agent can come up with a funny answer to this question which originally has no answer
+    - we can use prompt engineering to write better prompts like n-shot prompting, telling the agent to output the response only in a particular format, etc.
+    - we can also provide an output schema (a class with attributes) and the agent will fill out the attributes of this class
+  - use tools: it is the feature that makes agent an agent, instead of a normal chatbot
+    - the actions that an agent can take are defined by the tools we provide it
+    - tools allow our agents to fetch data, execute tasks, call other agents, etc.
+    - add a @tool to a function to declare it as an agent
+      - @tool("tool_name if we don't want to use the function name as the tool name", description="description")
+      - def agent_tool_name(): # by default the tool's name comes from the function's name
+      -     "optionally provide the tool's description here"
+    - the agent_tool_name and description should be detailed enough for the agent to understand what the tool does
+    - invoke tool as: agent_tool_name.invoke(args) # agent invokes it like this
+    - web_search_tool can be used to find latest info beyond the model's training data cutoff date
+  - add short-term memory to agents to retain memory of previous messages to enable back-and-forth conversations with the agent instead of an one-shot interaction
+  - add images and audio to the agents
+  - response objects:
+    - AIMessage: response from model
+    - HumanMessage: user query
+    - ToolMessage: tool and the parameters that the agent ran
+    - response metadata: token usage, model version used, etc.
+  - adjustable params:
+    - temperature: adjust randomness of the model output -> higher temperature makes model more random/creative, and a lower temperature makes the model more deterministic
+    - max_tokens: limit to the number of tokens in the output, thus limiting the output size
+    - timeout: max time to wait for model response before cancelling the request
+    - max_retries: max number of times to retry a query if a request fails
+  - we can stream responses to users to reduce perceived latency.  In streaming, tokens are returned as soon as they are generated continuously
+- Langsmith:
+  - used for tracing because printing response objects for debugging can become tedious. so, langsmith provides step by step debugging info in a nice UI
+    - some debugging info include: latency, token usage, tools being called and their inputs and outputs
+  - to trace our agent we simply need to add the following in our project's .env file:
+    - langsmith_api_key
+    - langsmith_tracing=true
