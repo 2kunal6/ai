@@ -2,7 +2,7 @@
 - used to build AI agents
 - AI agents can take actions autonomously on our behalf like reading an email, searching the web and then take further actions based on the outcomes of these actions.  This loop happens continuously until the specified goal is reached.
 - features:
-  - agent = create_agent(model_name, tools=[..], system_prompt="")
+  - agent = create_agent(model_name, tools=[..], system_prompt="", checkpointer=InMemorySaver())
     - we can provide the tool's names in the system_prompt but if the tool_name and tool_descriptions are good then the agent can find the right tool automatically
   - it supports many models out of the box, but it's model-agnostic
   - interact with chat model
@@ -21,7 +21,7 @@
     - the agent_tool_name and description should be detailed enough for the agent to understand what the tool does
     - invoke tool as: agent_tool_name.invoke(args) # agent invokes it like this
     - web_search_tool can be used to find latest info beyond the model's training data cutoff date
-  - add short-term memory to agents to retain memory of previous messages to enable back-and-forth conversations with the agent instead of an one-shot interaction
+  - add short-term memory to agents to retain memory of previous messages to enable back-and-forth conversations with the agent instead of an one-shot interaction using "thread_id" using checkpointer
   - add images and audio to the agents
   - response objects:
     - AIMessage: response from model
@@ -34,9 +34,77 @@
     - timeout: max time to wait for model response before cancelling the request
     - max_retries: max number of times to retry a query if a request fails
   - we can stream responses to users to reduce perceived latency.  In streaming, tokens are returned as soon as they are generated continuously
+  - state: agent's memory
+    - state doesn't get saved from one run to another
+    - memory is saved from one run to another using langraph's check pointer.  It saves a snapshot of the state at the end of each run and then groups them with the same thread_id inside config in agent.invoke()
+    - by default agent state tracks a list of messages only, but we can add custom fields
+  - multimodal messages: feed audio, images and video to agent, not only texts
+    - we need to encode the audio and images to base64 before feeding it to the model
 - Langsmith:
   - used for tracing because printing response objects for debugging can become tedious. so, langsmith provides step by step debugging info in a nice UI
     - some debugging info include: latency, token usage, tools being called and their inputs and outputs
   - to trace our agent we simply need to add the following in our project's .env file:
     - langsmith_api_key
     - langsmith_tracing=true
+  - MCP:
+    - Model Context Protocol
+    - open protocol that standardizes/defines how our llm apps connect to and work with tools and data sources
+    - MCP-host (AI app / agent) hosts an MCP client that connects to a MCP server
+    - The MCP server provides tools, resources (like read-only data), and prompt templates to clients
+    - MCP servers can be connected to any app that supports mcp, not just langchain agents
+    - Once we build our MCP servers with tools and context, it becomes easy to share with other developers
+    - There's a huge open source community of MCP servers built by others that we can use
+    - To build our own mcp server, we can use the library and decorate functions with decorators like @mcp.tool(), @mcp.resource(), and @mcp.prompt()
+    - to use a server we can use the langchain_mcp_adapter.client library and point it to a mcp server
+      - we need to define a transport parameter in the client which can be stdio or streamable-http
+      - we can take the tools, resources and prompts from the server and can use them to build our agent
+      - we need to simply copy the config provided by the target mcp server to create our client
+  - Context
+    - We can pass to the agent during the create_agent function call
+      - we can build it by defining a class with the @dataclass decorator
+    - context isn't passed to the model directly. it's passed to tool calls in an object call ToolRuntime
+      - this is because we want to give the model the exact amount of info it needs, so as to not to overload it's context window
+      - we need to make a tool call in our agent to access this ToolRuntime info
+      - we need to pass these tools and contex while calling create_agent
+    - this context is immutable and our agent can't update it
+  - State:
+    - unlike context_schema, Agent's state can be updated by agent as it learns info during the conversation
+    - agent updates state using a tool using the Command function
+  - multi-agents:
+    - longer and larger tasks deteriorates performance of a single agent, so we need to decompose large tasks to multi-agents
+      - the performance deteriorates because there would be a large number of tools to choose from, and a large context window size
+    - these multi-agents work together to solve a problem
+    - a single orchestrator agent delegates tasks to sub-agents
+    - in langchain we can add agents as tools to the main agent
+      - these tools call the subagents inside the function as sub_agent_x.invoke(...)
+  - Middleware:
+    - let's us intercept and customize the agent's execution at every step
+    - Middleware is a catchall term that we use for functions that we can insert the loops (agent <-> llm <-> tool calling loops)
+    - - we can write our own middleware too
+    - we can run the middleware functions before and after agent call's using @before_agent and @after_agent decorators.  We can also run the middleware functions before and after every model call using @before_model and @after_model decorators
+      - these are node-style middleware
+    - we include middlewares in the create_agent function using middleware parameter similar to tools
+    - SummarizationMiddleware: provided by langchain out of the box
+      - checkpointer can overflow our llm's context window because it keeps all messages
+      - we can summarize the previous conversations so as not to overflow the context window
+    - HumanInTheLoopMiddleware:
+      - to ask human to approve/reject sensitive actions before performing them
+      - the arguments to this is the list of tools we want to interrupton before performing the action
+      - on being interrupted we can invoke the agent again with our decision to approve/reject the tool call using the Command function
+        - we need to send the same thread id in the config param to make sure it approves/rejects the same thread that's being interrupted on
+        - we can also edit and approve the edited version. the edited version can be specified using the name of the tool and the new arguments we want to call the tool with
+    - wrap-style middleware
+      - we can change the models, tools, and prompts on the fly based on type of user (like internal/external, english/french)
+      - we wrap our model calls with custom middleware functions, so we call it wrap-style middleware (as opposed to node-style middleware)
+      - model instance is represented as a model request
+      - to switch prompts we can use @dynamic_prompt decorator
+      - @wrap_model_call decorator can be used to override list of tools for unauthorized users
+        - it can also be used to swap llm models based on some logic like small/long conversations
+        - we can simply pass this functionname with this decorator in the middleware param in the create_agent function.  After that when we do agent.invoke(..) it will call this middleware function and use the right llm model/prompt based on our logic
+    - Node-style middleware adjusts agent's state while it's running (ex. trim list of messages), whereas wrap-style middleware adjust an agent's model/tool/prompt while it's running
+      - ToolRuntime is used to update runtime context based on conversation like updating an the username of the user
+- @dataclass vs x(AgentState)
+  - state_schema vs context_schema
+- Agent Chat UI
+  - out of the box we can use agentchat.vercel.app
+  - @wrap_model_call functions need to be run asynchronously for this
