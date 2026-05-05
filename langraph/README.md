@@ -6,6 +6,11 @@
 - Router: an llm can act as a router in choosing one of many steps based on it's state (created in response to the user's input)
   - as we make the apps more autonomous the reliability decreases.  Langraph helps in increasing the reliability
   - pillars of langraph that helps us achieve this reliability: persistence/in-memory, humann in the loop, controllability, streaming
+  - for example, a llm model can decide between returning a tool_call or a natural language answer as the response.  Thus it acts as a router in this case 
+    - the tool call here is performed by a node that will call our tool, or we can simply use the built-in ToolNode
+      - Ex: builder.add_node("tools", ToolNode(["tool_function_name"]))
+    - to call either the toolNode or simply respond with natural language we do this:
+      - builder.add_conditional_edge("tool_calling_llm", tools_condition) # tools_condition is built-in
 - Langraph works nicely with langchain (which has many llm integrations, vector store integrations etc.).
 
 ## Graph
@@ -50,3 +55,43 @@
 ## Other concepts
 - threads: to capture history of any run of the graph
 - response_metadata gives us extra info like token usage, model used, etc.
+- Agent Architectures:
+  - React: We take the result from the tool call and pass it back to the model
+    - start -> llm_router_tool_node <-> tool_call
+                  |
+                  v
+               final natural language answer to user 
+    - Ex. if tool call output is 12 then final natural language output will be: the multiplication of 3 and 4 is 12
+    - to-and-fro can happen between llm_router_tool_node and tool_call multiple times (in a loop) until the llm_router_tool_node deems the output from the tool_call satisfactory 
+      - we can set a max_limit for the number of times the tool can be called
+    - steps:
+      - act: model call tools
+      - observe: reason based on tool output what to do next
+      - reason: either to stop or call more tools until the goal is reached
+    - we need to add an edge from the tool_node back to the assistant in addition to add_conditional_edge with tools_condition above 
+    - Ex: multiply 2 and 3 and then add 5 to the output
+      - here 2 tools might be called - multiply and add
+- Memory:
+  - we need it to retain working memory when we do new invocations to the graph multiple times. This is because the state is transient between 2 graph invocations 
+  - For example: "add 2 and 3" followed by "add 5 to it".  In this case, the agent will not remember the first conversation and will not know what to add 5 to
+  - langchain uses checkpointer to save the graph state after each step.  One of the easiest checkpointers is MemorySaver, which is just an in-memory key-value store
+    - graph = builder.compile(checkpointer=MemorySaver())
+    - The checkpointer writes the current state to memory after every step in our graph 
+    - The checkpoints can be associated together in a thread.  A thread is a collection of checkpoints
+      - config = {"configurable": {"thread_id": "1"}}
+      - graph.invoke({"messages": messages}, config)
+    - Now when I say graph.invoke for "add 5 to it", we need to pass this same config with the same thread it for it to be able to access the previous invocation of "add 2 and 3".  So, it will add 5 to 5 (answer of "add 2 and 3")
+    - In studio we don't need to supply checkpointer because studio is backed by the langraph API, which packages the code for us and it has it's own persistence layer (postgres)
+
+## Deployment
+- Langraph: python and js library to build and run agents
+- langraph API: 
+  - bundles the graph code
+  - offers persistence to maintain state across interactions
+  - provides a task queue to to manage async ops
+- langraph Cloud:
+  - hosted service for the langraph API
+  - allows deployment of graphs from github repo
+  - offers monitoring, tracing and API documentation
+- langraph SDK:
+  - python library to interact with langraph graphs by providing HumanMessages
