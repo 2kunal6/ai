@@ -18,10 +18,13 @@
 - Node structure START Node_0 -> Node_1 -> END
                                -> Node_2 ->
   - START to Node_1 OR Node_2 is called conditional edge
-- To define a graph in Langraph, we need to first define a state
+- State:
   - The state is the object that we pass between the nodes and edges of the graph.
   - class State(TypeDict): //State is of type dictionary
     - state_attribute: str
+  - TypeDict is not the only way to establish schema for our graph.  Another way is python @dataclass
+  - Problem with TypeDict and @dataclass is that datatypes are not enforced at runtime.  For example, we can mention attr:str but in runtime we can assign int to it 
+    - to enforce datatypes at runtime we can use pydantic 
 - nodes are defined as simple python functions that takes in state defined above: def node_1(State):
   - we might update the state_attribute in this node, and return it for this new state to be available to the next nodes
 - edges: to connect the nodes
@@ -31,7 +34,7 @@
       - if(x): return node_1
       - else: return node_2
 - graph:
-  - builder = langraph.graph.StateGraph(State)
+  - builder = langraph.graph.StateGraph(State) # this state is created above
   - builder.add_node("node_1", node_1) # similarly define other nodes
   - builder.add_edge(START, node_1)
   - builder.add_conditional_edge(node_1, conditional_edge) # this conditional_edge is the function defined above
@@ -47,7 +50,7 @@
   - reducers tell us how to update the state as it passes through different nodes, for example append to the list of messages each time a new message appears, whereas normally we just overwrite the whole state
   - we can use class State(MessageState) which will have this functionality by default i.e. all the to-and-fro HumanMessage and AIMessage will be appended to the list 'messages'
 - Chain:
-  - # Node
+  - #Node
   - def llm_calling_node(state: MessagesState):
     - return {'messages': [llm_with_tools.invoke(state['messages''])]} # llm_with_tools is defined above 
   - now if we defina a graph using this node, and call the graph with input: "what is 2 multiplied by 3?", it will invoke the tool call that multiplies the numbers, and respond with this tool_call output
@@ -95,3 +98,89 @@
   - offers monitoring, tracing and API documentation
 - langraph SDK:
   - python library to interact with langraph graphs by providing HumanMessages
+
+## Memory
+- reducers:
+  - by default the value is overwritten
+  - when nodes run in parallel and they both update the same key, then langraph won't know which update to keep, so it doesn't compile.  Reducers help with these situations by telling how state updates are performed on specific key of our state schema by using Annotated Type to our key and include a reducer function like append to list
+    - so, now if we update this state key/attribute, this will be reduced as per the annotated logic like append
+    - the reducer can be any arbritrary function we define with the logic we want
+  - MessageState is built-in to annotate messages list by appending to messages list each time a message is sent by human or AI
+    - if we create langraph.graph.Message with an id, then add_message will replace the message with this id
+    - to remove we can add_message(RemoveMessage(.., id=<id-of-msg-we-want-to-remove>))
+- Multiple Schemas:
+  - Typically a graph communicates via a single schema which contains the graph's input and output keys/channels
+    - but internal nodes might pass info that's not required by input or output of the graph
+  - PrivateState: required for intermediate working of the graph, but not relevant to the overall input or output of the graph
+    - START -> node_1 -> node_2
+      - node_1 takes input schema and outputs private_schema
+      - node_2 takes this private_schema and outputs output schema
+    - graph = StateGraph(OverallState, input=InputState, output=OutputState)
+      - input and output are subsets of OverallState. input is required when we compile the graph and the output is printed after graph execution. The overallState can be used for internal communication purposes
+- Reduce messages in Memory:
+  - to reduce token usage and latency, especially for long running conversations
+  - Techniques:
+    - Filtering:
+      - to remove older messages, we can create a node named filter_message with RemoveMessage that removes all except the last 2 messages
+        - now we need to create a graph like START -> filter_message -> llm_call_node -> END, so that each time the graph is invoked, the filter_message is applied and older messages are removed except the last 2
+        - Alternatively we can just llm.invoke(messages[-2:]) in the llm_call_node instead of creating this new filter_message node
+    - Trimming: using langchain.core.messages.trim_messages
+      - we can trim messages based on a specified number of tokens
+    - Message Summary:
+      - use a summary:str key in the graph State
+      - in the call_model_node, we first add the summary to the message if the summary is present, and then llm.invoke(summary + message)
+      - We also define a summarize_conversation_node that continuously keeps creating summaries of the conversations and continuously keeps deleting the older messages
+        - we can use a conditional_edge that can call this summarize_conversation_node if the number of messages exceeds a threshold x 
+        - we need to use Checkpointer InMemory to store these summaries
+        - additionally we need to use a thread_id in graph.invoke
+- External DBs:
+  - Langraph offers a few checkpointers that supports external DBs like sqlite or postgres 
+  - the problem with in-memory storage is that it is lost once the program terminates
+
+## Human in the Loop
+- to integrate human in the agentic flow to approve/deny sensitive tasks like payments, writing to DBs etc.
+- streaming: 
+  - 2 methods to stream the graph as it's running:
+    - stream (synchronous):
+    - astream_events (asynchronous):
+      - this is to stream tokens from llm, so we can only print the async events from nodes where the llm call is made
+      - we also get metadata like partial/complete output type from these events
+  - ways:
+    - values: this streams the full state of the graph after each node is called
+    - updates: this streams only the updates to the state after each node is called
+    - * since the state also contains the actual messages, we can stream the messages only which is the output
+  - for chunk in graph.stream({"messages": HumanMessage(...)}):
+    - print(chunk)
+- 3 use cases for human in the loop: approve sensitive tasks, debug, edit the state
+- breakpoint: 
+  - to stop a graph at any node, and then continue executing after user approval for example
+  - compile a graph with interrupt_before=["node_name"]
+    - or using langraph api using: async for chunk in client.runs.stream(... , interrupt_before="<node-name>")
+  - we can also use interrupt_after
+  - if we invoke the graph with None it will just continue executing from the last checkpoint
+    - we can invoke the graph with None along with the thread_id to continue after taking user approval, for example using input()
+- Editing Graph state:
+  - we can update the graph state after it reaches the breakpoint instead of approval/deny for further execution with the same state
+    - graph.update_state(thread, message=HumanMessage("new human message"))
+      - using langraph api: clients.thread.update_state(...)
+    - after this we can invoke the graph with None like before to proceed with this new human message (this new message will trigger the reducer and will summarize as per the reducer logic)
+  - To use user input to update the state, we can use a no-operation dummy node that will accept user feedback and inject it into our graph and calling graph.update_state(..., as_node=dummy_node)
+- Dynamic Breakpoints:
+  - ability to allow the graph to interrupt itself based on some condition of the state
+  - can be done by raising NodeInterrupt from the graph node of interest
+  - we need to then update the graph state to pass this NodeInterrupt condition and continue running by passing None to graph.stream or graph.invoke or client.threads.update in langraph API
+- Time Travel:
+  - to support debugging by viewing, replaying, and forking prior states
+  - using graph.get_state_history(thread_id)
+    - this returns the list of all State Snapshots (or checkpoints) after every step in the graph
+    - we can replay our agent from any of these prior steps by passing in the checkpointid and thread_it to graph.stream(None...)
+      - if we just pass the thread id, it will pick up from the current state of the thread
+      - here we just replay, we don't reexecute
+    - we can replay using langraph api by passing checkpoint_id to client.runs.stream
+  - Forking:
+    - when we do graph.update_state we are forking from the current checkpoint.  To fork from a previous checkpoint_id we just the pass the previous checkpoint_id from which we want the fork to happen
+      - this will reexecute from the previous checkpoint, and not just replay like before
+      - here we also need to supply the message_id to graph.update_state(...) from the initial checkpoint to overwrite the previous message with this new message
+        - otherwise the reducer will append the new message to the list of messages and our updated message will have 2 human messages in a row (at that checkpoint)
+    - in langraph api we do client.threads.update_state with the checkpoint_id and the updated message
+      - to rerun from this checkpoint we call client.inputs.stream with input None just like before
