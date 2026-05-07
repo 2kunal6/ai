@@ -272,3 +272,73 @@
 - Task Maistro project:
   - it also decides when to save to memories, in addition to the functions of the previous chatbots which just reads from memory
   - to see when a trustcall has updated the memory, we need to pass a listener (provided by langchain) to the trustcall object creation parameters
+
+## Deployment
+- using Langraph Platform
+  - other features provided by Langraph Platform: 
+    - agent scheduling using cron jobs
+    - long running agents: background runs
+    - better chat UX: support for double texting
+    - agent config and versioning: assistants
+  - components: 
+    - langraph cli takes our python code with graph and turns it into a deployment
+      - builds a docker image with code to run a server, our graph and any dependencies
+      - this server is composed of 2 different types of workers:
+        - http worker: handles client communication
+        - queue worker: this executes our graph
+        - client issues a command to run via http worker -> htto worker writes a runid to postgres <- queue workers poll postgres for new runs, execute them, publish update from the run to redis
+          - the http worker can subscribe to the associated runid topic in redis, get updates and stream them back to the client
+      - these 2 workers in the server communicate via redis
+      - postgres supports short and long term memory, and supports task queue
+    - we can use the following methods to connect with this langraph server api deployment:
+      - clients
+      - python/js sdk: to interact with the graph
+      - remote graph abstraction: using this we can for example create subgraphs from a deployed graph
+        - used to compose or deploy graph within another graph as a subgraph or to run the graph within the langraph library
+        - so we can use this remote graph abstraction within langraph to interact with our graph
+      - http
+      - langraph studio
+- Production options:
+  - langraph cloud: managed for us in langchain's infra
+  - byoc: managed for us but it uses our infra
+  - self-hosted: managed for us in our infra; gives more data privacy
+- build a deployment:
+  - steps:
+    - langraph build (this is a langraph CLI command): to build a docker image for the langraph server that runs our code
+    - once the image is built we can create our own docker compose -> docker compose up -> to launch our deployment
+      - this runs the deployment locally containing 3 containers: server built from our image, redis, postgres
+      - if we don't want docker-compose then we can simply do docker run with redis and postgres URIs
+  - to create a deployment we need a particular code structure with:
+    - langraph.json: API config file
+      - has name of the graphs, python version, dependencies, custom dockerfile lines
+    - code: that specifies our graph
+    - requirements.txt
+    - optional: .env or docker-compose.yaml
+- connect with deployment:
+  - the langraph server provides us with many different endpoints to connect with our deployed agent
+  - we can group these endpoints into a few common agent needs:
+    - runs: atomic agent executions
+      - stateless runs do not save anything to a thread; cannot be used for multi-turn conversation
+      - thread runs saves to threads
+      - types of runs:
+        - fire and forget: run happens in background
+          - useful to work with long running agents
+        - waiting on a reply: polling or blocking
+      - to wait for a previous run to complete before firing a new run, we can use langraph_sdk_client.runs.join
+    - threads: multi-turn executions or human in the loop
+    - store: long term memory
+  - langraph_sdk can connect to the deployment and access these endpoints
+- Double Texting:
+  - Langraph Platform helps to deal with practical challenges that comes with deployed apps like double texting
+  - here user submits a second run before the first run is complete
+  - approaches to deal with this in langraph:
+    - reject: second run request until the first run completes
+    - enque: enque the second run to run after the first run completes
+    - interrupt: interrupt the first run; but we still preserve the first run
+      - we can get any state update that the first run made till the time it executed
+    - rollback: interrupt the first run and delete it
+    - using client.runs.create(..., multitask_strategy='reject')
+- Assistants API:
+  - to manage agent versions, ex if we want a version of the same agent for our personal and work related tasks
+  - different assistants can use different namespaces
+  - we can supply the assistant type using client.assistants.create(type="personal"), and based on this type we can pick the values (using state values) to act as either personal or work assistant
