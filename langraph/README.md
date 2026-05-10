@@ -342,3 +342,16 @@
   - to manage agent versions, ex if we want a version of the same agent for our personal and work related tasks
   - different assistants can use different namespaces
   - we can supply the assistant type using client.assistants.create(type="personal"), and based on this type we can pick the values (using state values) to act as either personal or work assistant
+
+
+## Langfuse
+- Observability and monitoring platform for llm apps.
+- unlike langsmith it works with many frameworks like langchain, langraph, llama, crewai etc.
+- Features:
+  - tracing
+  - prompt versioning and management
+    - we create prompts with langfuse and pass it to the langraph graph
+  - cost tracking: counting tokens
+  - evaluations: measure response quality
+    - use llm as judge. types: correctness, grounding, reliability etc.
+- Implementation: we build an app with langchain, and on graph.invoke(..., langfuse_handler)
