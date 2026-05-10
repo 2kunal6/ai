@@ -1,0 +1,136 @@
+## Introduction
+- It is an open source standard to connect AI apps to external systems like data sources (ex. files, db), tools (ex. search engines, calculators), and workflows (ex. specialized prompts) - enabling them to access info and perform tasks
+- It helps the agent become more personalized by accessing our personal info and using our personalized tools.  It also helps us access to an ecosystem of tools and resources to help development faster - build once, integrate everywhere
+
+## Architecture
+- MCP follows a client-server architecture where an MCP host (AI agent like Claude Code) connects to one or more MCP servers.  The MCP host establishes and maintains one MCP client to connect to each one of these servers.
+- Layers:
+  - Data Layer:
+    - defines a JSON-RPC based exchange protocol that defines the message structure and semantics
+  - Transport Layer:
+    - it manages communication channels and auth between clients and servers.
+    - It supports 2 transport mechanisms:
+      - stdio transport: uses standard IO streams for direct process communication in same machine without network overhead
+        - never write logs to standard output here, otherwise it will corrupt the JSON-RPC message 
+          - use either print('..', file=sys.stderr) or logging.info(..)
+      - streamable http transport: uses HTTP-POST for client to server messages with optional Server Side events for streaming
+- Data Layer Protocol: defines semantics for client server communication
+  - MCP is a stateful protocol because the client and server needs to negotiate the capabilities
+  - Primitives:
+    - it defines what the client and server can offer each other, like contextual information and actions
+    - servers can expose 3 core primitives:
+      - tools: executable functions that AI apps can invoke
+      - resources: data resources that provide context to AI apps
+        - Apps can decide how to use a resource - via keyword search, embedding search etc.
+        - each resource has an unique URI
+      - prompts: reusable templates of prompts
+      - Ex: for a MCP server that provides context about a DB, it can provide tools to query the db, resource about it's schema, and prompts with few shot examples
+      - each primitives has method like */list/ */get/ that the client can use to list or get all methods or call tool using /tools/call
+    - clients can also expose primitives like:
+      - sampling: server can request llm completions from the client's AI app using sampling/CreateMessage
+      - elicitation: server can use it to request more info from client like to confirm an action or when info is missing
+      - logging: server can send logs to client for debugging and monitoring
+      - roots: allow clients to specify the directories that servers should focus on
+        - it does not provide security because it's not enforced and servers can choose to not follow this
+    - protocols offer cross-cutting primitives that augment how requests are augmented:
+      - Tasks: durable execution wrappers that provide details on execution env like expensive computation, batch queries etc.
+- Steps of client-server communication:
+  - client sends an init request to establish connection and negotiate supported features.  
+    - It negotiates:
+      - protocol
+      - capabilities: supported tools, resources and prompts
+      - Identity info: versioning for debugging
+    - During initialization the MCP client manager establishes connections and store capabilities of the servers.  The app uses this app to determine which server functionalities (tools/prompts/resources) to use when required
+  - Tool Discovery: 
+    - clients can call /tools/list to get the list of tools available
+    - the AI app puts all available tools in a tool registry
+  - Tool Execution
+    - response contains an array of contents along with content type like text
+  - Real time notifications/updates
+    - MCP supports real-time notifications to support dynamic updates between clients and servers
+    - for example when the server wants to notify the client about new tool addition
+    - on receiving a notification the AI app updates its tool registry with the update tool list
+- MCP Servers: 
+  - programs that provide specialized capabilities to AI apps using standard protocol
+  - ex: filesystem servers, db servers, github servers, slack servers etc.
+  - Servers provide functionality through 3 building blocks: tools, prompts, resources
+- Versioning:
+  - format: "yyyy-mm-dd"
+  - version negotation happens during init, and client and server can work on multiple versions simultaneously but they must agree on one version for a session
+
+## use
+- connect to local mcp servers:
+  - for example, we can use filesystem server using claude desktop to organize our files and folders with chat
+- connect to remote mcp servers:
+  - by connecting to remote mcp servers AI apps can make use of pre-built project management tools, documentation tools, repo tools etc.
+  - Custom connectors: to connect claude to remote mcp servers 
+
+## Agent skills
+- portable instruction sets that give agents domain knowledge about a task
+- For MCP development they encode design decisions (models, tools, auth) so that our agent can understand our use case and create a server for us
+- every skill ships a skill.md and references/ folder of supporting materials (auth flows, tool design patterns, mkanifest schemas) that the agent reads on demand
+- with the skills installed we can ask our agent to build a mcp server
+  - we can either build a mcp server, mcp web app, or mcp bundle (with runtime)
+
+## Build
+- MCP server
+  - install mcp
+  - implement functions with @mcp.tool decorator
+  - run
+- MCP client
+  - If there are many servers and tools it becomes hard to manage and it wastes a lot of tokens if we load every tool definition in the context - increasing latency and degrading performance
+  - 2 patterns addresses this challenge:
+    - Progressive Tool Discovery:
+      - it decides when tools enter a context
+      - here the host does not inject tool definitions in the context but provides a search-tools light tool to the model.  The host loads full tool definition into the context only as needed
+      - if tool definitions take 1-5% of the prompt then maybe looking into tool discovery is a good option
+      - strategies for tool discovery:
+        - keyword based search
+        - embedding based search
+        - use a small model for search based on context/prompt
+        - any hybrid of the above approaches
+      - Dynamic Server Management:
+        - In the above Tool Discovery approach we connect to every server at startup.  Here we keep a list of servers and only connect to a server when necessary and release the connection after the task is accomplished
+        - we can use a skill.md and the agent can connect to a server only when that skill is needed
+    - Programmatic Tool Calling / Code Mode:
+      - with direct tool calling every tool call is a round trip - the model generates a tool call, the client executes it and the result goes to the model's context. It also wastes tokens if there are a chain of tools (like read log, create ticket, notify teams to work on, etc.) to be called and each tool call passes through the model.
+      - In Programmatic Tool Calling, the model writes the code that calls tools.  The code executes in a sandboxed environment and only the final result reaches the model.
+        - here the clients need to implement a sandbox env
+      - steps:
+        - host reads each server's tool and creates a typed function APIsbased on each tool's input and output (or use generic type if output type not provided)
+        - the model writes code against these APIs instead of making separate tool calls
+          - if we have to create a ticket for each log error, then thousands of log entries will have to pass through the model context.  with Programmatic Tool Calling all these tickets will be created in the sandbox without touching the model
+        - sandbox executes the complete code
+      - here the host acts as a broker, executes code by routing them to the right server, and sending final output to model
+
+## Security
+- to secure access to sensitive resources and tools exposed by MCP servers.  If our MCP server handles user data or admin actions, we need to make sure only authroized users are able to access these endpoints.  It also helps with user tracking for audit, rate limiting, for enterprises, etc.
+- steps:
+  - client tries to connect to server, and server tells it the location of the PRM doc (Protected Resource Metadata), which tells the client how to authenticate
+  - the client learns about auth mechanism from this PRM doc
+  - the client connects to any one of the auth servers to connect
+  - the client registers (optionally in a temporary fashion) with the auth server. 
+  - the client connects to the mcp server with the token from this auth server
+- MCP Proxy server: an mcp server that connects mcp clients to 3rd pary APIs
+- Best Practices:
+  - Confused Deputy Problem: 
+    - when a mcp server connects a mcp client to a third party API and obtain a cookie (with consent), a third party can get this cookie with a fake url
+    - mitigation: a mcp proxy server must implement per per-client consent
+  - Token Passthrough: 
+    - MCP server takes a token from a MCP client and pass it to the downstream services without validating if the tokens were meant to be for the MCP server
+    - mitigation: MCP servers must not accept tokens that were not explicitly meant for the MCP servers
+  - Server Side Request Forgery (SSRF):
+    - an attacker can induce mcp client to connect to unintended APIs
+    - mitigation: mcp servers should enforce https, block unnecessary IP ranges etc.
+  - Session Hijacking:
+    - an attacker obtains client session credentials and makes unauthorized request on it's behalf
+    - mitigation: mcp servers must validate each incoming requests, and should not rely on session for auth
+  - Local MCP server compromise:
+    - if a personal machine is used as a MCP server, a client can inject malicious code
+    - mitigation:
+      - use consent to run code
+      - scope minimization by allowing only limited actions
+
+## Developer Tools
+- MCP inspector:
+  - to test and debug mcp servers
