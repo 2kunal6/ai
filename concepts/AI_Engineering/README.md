@@ -1,0 +1,846 @@
+## Introduction
+- AI Engineering refers to the process of building models on top of Foundational Models.  Since the Foundation Models are probabilistic, AI Engineering aims to make our app systematic (if not deterministic)
+- AI vs ML Engineering:
+  - MLE is about building models, whereas AI Engineering is about leveraging one - adapting and evaluating models
+  - MLE models are generally small compared to AIE
+  - AIE produces open-ended output like different text generation each time for a given input - so it's harder to evaluate too
+- AI Engineering is about adapting LLMs and LMMs (Large Multimodal Models) - Foundational Models - to specific apps.  Foundational models work at huge scale, which is possible due to self-supervision.  For Multimodal models (image, text) pairs are downloaded from internet
+  - LMs are self-supervised because the inputs provide both the labels (tokens to be predicted) and the context
+- Best practices for working with foundational models and ML apps:
+  - systematic experimentation
+  - rigorous evaluation
+  - Finding better and cheaper models
+  - Optimization to models
+- Aspects to consider for AI apps:
+  - finding enough quality data
+  - prompt
+  - hallucinations: when a model gives answers that isn't based on facts
+  - RAG
+  - evaluation
+  - agents
+  - finetuning
+  - create a feedback loop to improve model continuously
+- Foundational Models:
+  - Foundation Models are multi-modal unlike LMs. they are called Large Multimodal Models (LMM)
+    - FMs are generic and not task-specific.  We can use prompt engineering to use it for different purposes, and we can also use fine-tuning to tune it for specific purposes
+  - Language Models (LMs): it encodes statistical info about one ore more languages to predict next word given a context.
+    - Token: 
+      - basic unit of language model
+      - a token can be a word, character or part of a word like (-tion)
+      - the set of all tokens a model can work with is it's vocab
+      - LMs use token as their unit instead of word because:
+        - it says something meaningful unlike a character
+        - set of tokens is smaller compared to set of words
+        - we can create new words using tokens like chatgpting (chatgpt+ing)
+    - Types of LMs:
+      - Masked: 
+        - trained to predict tokens anywhere in a sequence using context both from before and after
+        - Ex: BERT
+        - currently they are used for non-generative tasks like sentiment analysis, text classification.  They are also used where overall context is required like code debugging, etc. 
+      - Autoregressive:
+        - trained to predict next token using only the previous tokens. it generates tokens in a sequence
+        - it is used for text generation tasks like Q&A etc.
+    - Outputs of LMs are open-ended.  Using it's fixed vocab of tokens it can produce unlimited number of output tokens - hence called generative AI
+    - Completions are based on probabilities and are not guaranteed to be correct.  Many tasks can be framed as completion tasks like translation, summarization, coding, math etc.  For example, is this email spam?
+- Metrics to judge an AI app:
+  - quality of response
+  - latency: Time To First Token 
+  - cost
+  - interpretability and fairness
+
+## Foundation Models
+- Training Data:
+  - Training data available from the internet like commoncrawl are low in quality.  Heuristics can be used to improve the quality of this data like using reddit posts with >x number of upvotes only.
+  - Domain specific models need domain specific data to train on
+- Modeling:
+  - As of now the most dominant architecture in language based Foundation Models is Transformer Architecture, which is based on attention mechanism
+  - Transformers are based on sequence to sequence architecture where the encoder takes sequence of input tokens and represent it in a hidden state; the decoder then produces output tokens based on this hidden state
+    - both encoders and decoders are based on RNNs; and so both input and output processing happens sequentially which is slow
+    - problems with seq2seq:
+      - output tokens are based only on the final hidden state - bad quality
+      - slow: all input tokens has to be finished before output tokens are generated
+    - the transformer architecture addresses these problems with the attention mechanism which allows to weigh the importance of different input tokens to generate the output token
+    - with transformers input sequences can be processed in parallel - speed up
+      - while the sequential input processing bottleneck is taken care of, in autoregressive models the problem of sequential output token generation remains
+    - Attention mechanism:
+      - query vector Q: current state of the decoder
+      - key vector k: represents a previous token
+      - value vector v: represents the value of a key vector
+      - the attention mechanism determines how much attention to provide a key vector by the dot product of Q & K. A higher dot product value means the model will use more value from that K's value
+      - the attention mechanism is always multi-headed. It allows to attend to different groups of input tokens simultaneously.  The outputs of all attention heads are then concatenated to generate the output
+    - Transformer architecture consists of multiple transformer blocks.  Although different models have different architectures but in general each block contains a attention layer and a MLP module (linear layers separated by non-linear activation functions).  A transformer based language model also has these components:
+      - an embedding module before the transformer blocks which converts the tokens and their positions to embeddings
+      - an output layer which converts the model's output vectors into token probabilities
+  - Apart from Transformers there are other models like seq2seq, GANs, RWKV based on RNNs, SSMs (State Space Models)
+- Model size: 
+  - 3 factors in deciding model size: number of params, amount of training tokens, number of FLOPs required for training 
+  - In general increasing a model's size increases its ability to learn
+  - The number of parameters help us estimate the compute resources to train and run a model.  For example, if a model has 7B params and each param is 2 bytes then inferencing it will require 14billion bytes (14Gb GPU)
+  - Sparse models might require significantly less compute.  An example of sparse model is Mixture of Experts where only a few number of experts are active for a given input
+  - Training size is measured in number of tokens.  If a dataset size of a model is 1 trillion tokens and training is done for 2 epochs then training size becomes 2 trillion tokens
+  - Training data should have quantity, quality and diversity
+  - Model compute is measured in number of FLOPs (Floating Point Operations) (FLOP/s is to calculate speed)
+  - Utilization: measures the max compute capacity we can use
+  - Compute-optimal models: 
+    - Scaling Law: It helps determine the optimal number of model params and training tokens given a budget
+    - In one of the experiments it was found that number of training tokens should be 20 times model size
+    - the model size and number of training tokens should be scaled equally: for every doubling of the model we need to double number of training tokens
+    - improving a model from 90-95% is way harder than improving it from 85-90%
+  - quality of model depends a lot on its hyperparameters which are not learned but are set by the user
+  - problems with training: we might run out of data or electricity. we might have to generate more data using AI
+- Post Training:
+  - to make the output of the model to encourage conversation and to not output bad data like racist/sexist/etc. that it scrapped from the internet
+  - Every model's post training is different but in general it has these general steps:
+    - Supervised/Instruction Finetuning: finetune pretrained model on high-quality instruction data (like stackoverflow, reddit etc.) to optimize models for conversation instead of completion
+      - these instruction/demonstration data should have a variety like Q&A, summarization, translation etc.
+      - these data can be human annotated, scrap from internet using heuristics, or use synthetic data
+    - Preference Finetuning: output responses that align with human preference using RLHF (Reinforcement Learning using Human Feedback) or RLAIF (RLAI Feedback), etc.
+      - here the reward model should provide more score to good answers by a human comparing 2 answers or provide points to an answer
+- Sampling:
+  - a model constructs its output using a process called sampling.  It makes AI's outputs probabilistic and it's important to learn about this probabilistic nature to control AI behaviours like inconsistency and hallucination
+    - inconsistencies: 
+      - different outputs for same input
+      - drastically different outputs for similar inputs
+      - Mitigations: 
+        - cache the answer
+        - fix the models sampling params like top-p/top-k etc.
+        - these mitigations might not work 100% of the time because different hardwares might compute differently
+    - hallucinations:
+      - hypotheses why hallucinations might happen:
+        - model generates based on the already generated output tokens; and if it generates a wrong token in the beginning it will expand on this to keep generating false tokens considering the previous generations as facts
+        - differences in model's and labeler's internal knowledge: if a model is made to mimic labeler's responses even though the model does not have this knowledge then effectively we are teaching it to hallucinate
+      - Mitigations:
+        - Reinforcement Learning where the model is made to differentiate between user inputs and the output tokens it generates - so it won't consider the initial outputs it generated as facts
+        - Supervised Learning: factual and counter-factual signals are included in the training data
+        - verifications: ask the model to source the knowledge it is basing it's output on using prompts 
+        - use a better reward function to punish the model for hallucinations using RL during training
+        - prompting + RAG: ask the model to answer as precisely and succinctly as possible; and say "I don't know" if it does not know
+  - NN produces probabilities for outputs.
+  - Given an input a NN outputs a logit vector.  Each logit corresponds to one output value.  In a LM each logit is one token.  To convert logit to probabilities we need to use a softmax function
+  - Sampling strategies:
+    - greedy: Always choosing the highest probability; it always gives the same and boring predictable output
+    - temperature: higher temperature produces more unlikely tokens making the model more creative
+      - logits are divided by temperature before applying the softmax function
+    - top-k: softmax requires 2 passes over the logits - slow
+      - top-k chooses top-k logits and do softmax over them to reduce computation
+      - low top-k means less creativity and choose among the highest logit values only
+    - top-p (nucleus sampling):
+      - in top-k, k is fixed but it should be different for different questions like "is x true or false?" vs "how to learn music?"
+      - model sums highest values until p is reached and consider these values only
+    - min-p: minimum p value that a sampling strategy must consider
+    - Stopping condition: used to keep latency and cost down
+      - number of tokens: downside is sentences can be cut in mid. 
+      - stop token or stop word like end of sequence token
+- Test Time Compute:
+  - Sampling tells how to sample the next token, whereas test-time compute says how to sample the entire output
+  - in test time compute, to improve a model's quality multiple answers are generated to improve the chances of a better response
+  - best of N technique: generated N responses and use the best - use beam search to generate a fixed number of promising candidates at each step of the sequence generation
+  - choosing the best model:
+    - we can let the user choose the best response
+    - we can choose the response with the highest product of output tokens (summation of log probabilities).
+    - we can use a separate reward model
+    - use application specific heuristics
+  - Uses:
+    - Test Time Compute can also be used to improve latency by showing the first and complete response to the user
+    - used in apps which require exact answers by choosing the answer with the max frequency among all generated
+    - if a model is not robust, we can benefit from multiple samples
+- Structured Output: 
+  - Structured output is crucial in the following scenarios:
+    - Tasks requiring structured outputs like text-to-sql
+    - tasks where outputs are used by downstream apps like emailing
+  - Techniques to make the model generate structured outputs: 
+    - prompting: works well if model can take instructions nicely
+    - post-processing: for example by writing a script for simple fixes to systemic simple problems
+    - test-time compute
+    - constrained sampling: for example consider only json related outputs
+    - finetuning: we can for example train only the new head
+
+## Evaluation Methodology
+- First we need to figure out where our system fails
+- Challenges of evaluating Foundation Models:
+  - responses are open-ended
+  - responses are coherent, so it sounds right.  We need to fact check and reason
+  - models are blackbox - we don't know the model architecture of training data, so it might be possible that the model has seen an input in it's training
+  - publicly available benchmarks are getting saturated fast
+  - models are general purpose, so unlike task-based evaluation we also need to discover new tasks for evaluation
+- Current methods of evaluation:
+  - use some evaluation prompts - which might be insufficient for application iteration
+  - eyeball the results
+- Language Modelling Metrics:
+  - Metrics: Cross Entropy, Perplexity, Bits Per Character (BPC), Bits per Byte (BPB)
+    - they are related and if we know the value of one we can calculate the other 3 using some info
+    - they are not only language modelling metrics, they can be used for models that generates any set of tokens including non-text tokens
+  - Entropy: 
+    - it measures how much info on average a token carries; higher entropy means a token carries higher info and the number of bits to represent this token will be higher
+    - entropy measures how difficult it is to predict the next word. For a language with low entropy it's easier to predict the next word and it makes the language more predictable
+  - Cross Entropy: how difficult is for a model to predict what comes next by learning the distribution of the training data
+    - A model's cross entropy depends on how much the model learned the statistical properties of the language; but also on the entropy of the training data
+    - KL Divergence tells the divergence of the distribution that the model learnt from the actual distribution of the training data
+  - Bits Per Character and Bits per Byte:
+    - If the cross entropy of a language model is 6 bits, then it needs 6 bits to represent a token
+    - Since different models have different tokenization strategies we use bits per character or bits per byte; since character can have variable number of bits for example for ASCII and UTF-8
+    - Cross Entropy tells us how efficient a model will be in compressing text. 
+  - Perplexity (PPL):
+    - It is measured in exponential of Entropy and Cross Entropy
+    - Cross Entropy tells us how hard it is to predict the next token, PPL tells us the amount of uncertainty it has on predicting the next token.  Higher uncertainty means there are more options for the next token
+    - Rules of PPL:
+      - More structured data gives less PPL because it's easy to guess data in structured format
+      - More context/vocab-size data gives higher PPL because with increasing context/vocab-size the amount of options increase
+      - PPL is a good proxy of model capability
+- Exact Evaluation:
+  - evaluates model without ambiguity, for example in MCQs
+  - Close-ended evaluations like for classification we already have techniques from ML
+  - For open-ended evaluations we can use these metrics:
+    - Functional Correctness: 
+      - did the model achieve what it was asked (like generate a website, or write a code, game bot, etc.)?
+      - pass@k: here k means the number of code the model had to generate to solve the coding question
+      - Functional Correctness generally works for tasks with measurable output
+    - Similarity Measurements against reference Data (ground truths or canonical data):
+      - for tasks like measuring translation quality
+      - 4 ways to measure similarities between open-ended texts:
+        - exact match with any of the reference answers
+          - we can also do variations like checking for reference as a substring in the final answer (with caution)
+        - asking an AI/Human evaluator to measure
+        - Lexical Similarity: how similar are the texts
+          - one way to do this is to count how many tokens 2 sentences have in common
+          - fuzzy matching 
+          - edit distance
+          - n-gram similarity: how many n-grams (not tokens) are common in 2 texts
+          - common metrics for lexical similarity: BLEU, ROGUE, METEOR, TER, etc.
+          - drawbacks: 
+            - hard to create good reference data
+            - high lexical score can still mean bad results
+        - Semantic Similarity (Embedding similarity): how similar are the texts in meaning
+          - convert texts to embeddings and compute similarity using cosine similarity
+          - it can be used to compute similarity for any modality like audio, image, etc.
+          - Metrics to compute semantic similarity:
+            - BERTScore: embeddings here are generated by BERT
+            - MoverScore: embeddings here are generated by a mixture of models
+          - this does not require as extensive reference data as lexical similarity
+          - drawbacks:
+            - dependent on quality of the embedding algorithm
+            - time and compute required to compute semantic similarity can be high
+  - Similarity measurements can also be used for other tasks like Retrieval and search, Ranking, Clustering, Anomaly Detection, Data Duplication, etc.
+- Embedding:
+  - an embedding is a numerical vector data the tries to capture the meaning of the original data
+  - Models trained to produce embeddings: BERT, CLIP, Sentence Transformers, proprietary APIs
+  - an embedding is considered good if similar words appear closer based on their cosine similarity distance (or similar metrics)
+  - there are some joint embeddings of multiple modalities like (text + image).  Embeddings are generated for text and image separately and the caption text corresponding to the image is desired to be closer in a joint embedding space - to find image corresponding to a text for example
+- AI as a judge:
+  - pros:
+    - they are fast, cheap, easy to use
+    - they can evaluate without reference data (which is good because prod might not have reference data)
+    - they can explain their decision which can be useful for auditing evaluation results 
+  - parameters: correctness, hallucination, fairness, toxicity, wholesomeness, repititiveness, etc.
+  - we can ask the AI judge to grade the response by itself, compare response to a reference data, or compare between 2 responses using prompts
+  - drawbacks: 
+    - this criteria is not standardized; open source tools like MLFlow, Ragas, llamaindex use different scoring systems
+    - it's probabilistic - so not reliable; if the AI judge model changes it might start providing higher scores to our app without our app changing -> false
+    - higher cost: we might have to make multiple calls for jedgement
+      - we can reduce cost by using weaker models for AI judge
+      - spot-checking: validate only a subset of results
+    - biases: 
+      - self-bias: where a model prefers it's own responses
+      - first response bias: where a model prefers the first response
+      - verbosity bias: some models prefer verbose answers
+- Ranking Models with Comparative Evaluation:
+  - to find out models which is best for our task at hand 
+  - types:
+    - pointwise evaluation: rate each model on a datapoint and compare these scores
+    - comparative: compare models against each other and use these comparison results to compute a ranking (using Elo, Bradley-Terry, etc.)
+      - drawbacks:
+        - scalibility problems: data-intensive to compare each pair: use transitivity property
+        - No standardization and quality control if crowdsourced for comparison
+        - doesn't tell us which models are good enough (which might be cheaper) -> only the rankings
+      - since users might not always rate their preference, AI models can be used to find out which models the users prefer
+- Evaluation Criteria:
+  - We need to decide the evaluation criteria before deploying an AI app to make sure our resources are not being wasted.  We can use the following heuristics to be more confident that our model is working nicely.
+  - Domain Specific Capabilities:
+    - we can use domain specific benchmarks, if available
+    - we can evaluate functional correctness of the app
+    - we can evaluate efficiency and latency; if an app produces sql queries that takes too long to run then the app might not be useful
+  - Generation Capability:
+    - can be measured using fluency (grammatically correct and natural sounding) and coherence (logical structure)
+    - task specific metrics: faithfulness for translation, relevance (are all important points considered) for summarization 
+    - we can evaluate factual consistency to avoid hallucinations.  Techniques to measure factual consistency:
+      - prompts with context having the knowledge
+      - self-verification: if multiple answers contradict then some of them might be hallucinated
+      - knowledge-augmented verification using search engine results
+      - RAG
+  - safety: 
+    - small AI models developed specifically to detect toxicity (hate speech, gender bias, etc.) can be used to make the AI app safe.  Apart from this, good prompts can also be used to detect toxicity
+    - we can evaluate our app against benchmarks available for toxicity
+  - Instruction Following Capability:
+    - we can test our app against benchmarks to make sure it can follow instructions nicely
+    - roleplaying: ask the model to play a particular role and answer as per that role. there are benchmarks for this like rolellm
+  - Cost and Latency:
+    - latency metrics: time to first token, time per token, time between tokens, time per query etc.
+      - to improve latency we can prompt the model to be concise
+    - Cost: compare between using an API with cost vs hosting your own model
+  - Model Selection:
+    - Using Prompt Engineering we might start with the biggest model to check feasibility and then use the smallest/cheapest one which serves our purpose for the task at hand
+    - Steps to choose model:
+      - filter out models that doesn't meet our hard requirements based on api/self-hosted, licensing, etc.
+        - buy vs host open-source models
+          - open weight means training data not available, whereas open model means training data and model weights both are available
+            - training data might be required to understand the model better or for audit purposes
+          - licenses might allow commercial use with restrictions like MAU, using an open source model for further use like generating synthetic data or model distillation etc.
+        - open source models can be hosted by any party and exposed via APIs. same model can be hosted by different APIs like azure vs anthropic
+        - factors to consider for host vs use api:
+          - data privacy: can data leave the company network?
+          - data lineage and copyright
+          - performance: proprietary models might be better because model developers won't like to distribute their models for free; plus commercial developers get feedback from customers on model usage which they can use to further keep improving the model
+            - but for some cases open source model's performance might be ok for tasks at hand
+          - functionality: model should be scalable and should be able to tool call if RAG is required for example
+            - downside of using an API is that we are limited to it's capabilities and can't finetune it if finetune api not provided. 
+          - API vs engineering cost to host: API might be easier to start with but at scale open source models might provide more profit
+            - we should try to use API standards like Open API to make models easily swappable
+            - we should also try to use models with good community support to circumvent quirks
+          - Control access and transparency:
+            - API providers might not provide us control and over-sensor to protect themselves against lawsuits; but we might need some censored features
+            - API providers might use rate limiting
+            - API providers can stop serving a model/country, and our app might fail
+          - on-device deployment: if we don't want the data to leave our system then we can't use API
+      - filter out more models based on publicly available benchmarking data
+      - run our own benchmarks for our task at hand
+      - monitor in prod to detect any failures
+- Navigating Public benchmarks:
+  - Evaluation Harness: a tool that helps us evaluate our model on multiple benchmarks
+  - there are a number of benchmarks focusing on different areas. How do we combine the results of the benchmarks to rank our models?
+    - for example, a model A might perform well on a coding benchmark compared to model B, but might perform worse in toxicity.
+    - to create our own leaderboard we can take lessons from public leaderboards
+  - public leaderboards;
+    - Many leaderboards rank models on the aggregated performance of a subset of benchmarks; but they might not use some useful benchmarks because of compute constraints or otherwise
+    - if 2 benchmarks are strongly correlated then we need to use one of them because otherwise that ranking will be considered twice
+    - ranking: 
+      - based on average score of all benchmarks; con: benchmarks which are more important gets same score as lesser ones
+      - mean win rate: number of times a model performed better than another, then average it
+    - Data contamination with public benchmarks: model trained on the same data used for benchmarking
+      - Handling data contamination:
+        - detection:
+          - n-gram overlap between train and evaluation dataset
+          - perplexity: if PPL is low then it's high chance that the model has already seen the data
+- Designing Evaluation Pipeline:
+  - to differentiate good and bad outcomes
+  - steps:
+    - evaluate all components in the system
+      - evaluate at different levels: per task, per turn, per intermediate output; because a task like pdf extractor might extract wrong text and our model might be working good. evaluating only final output might give us the wrong sense that the model is working badly
+        - a turn can cosist of multiple steps 
+        - turn based evaluation evaluates the quality of each output whereas task based evaluation evaluates whether the task was accomplished or not.  Also, it can evaluate how many turns it takes to complete the task? 2 vs 20 turns make a huge difference
+          - it can be hard to find the boundary of a task. we can use the 20 questions benchmark to define a task
+    - create an evaluation guideline:
+      - define evaluation criteria: what the app should and shouldn't do. for example, should a chatbot answer non-product related questions?
+      - define rubrics for scoring
+      - tie evaluation metrics to business metrics:
+        - example, for billing related queries 80% accuracy might be insufficient whereas it is sufficient for other tasks like general product recommendation
+    - define evaluation methods and data:
+      - different criteria require different evaluation methods like a toxicity classifier to judge toxicity, semantic similarity to measure relevance, and an AI judge to measure factual correctness
+      - we can mix and match evaluation methods like use a cheap model to give signals on all data and an expensive model to give signals for top 1% data - to manage costs
+      - use logprobs of output to evaluate confidence of the model
+      - use humans
+      - use evaluation not just for experimentation but also in production
+
+
+## Prompt Engineering
+- using instructions to guide the model to produce desirable output
+- most inexpensive method to improve a model's output
+- consists of: task description, examples, the actual task
+- model's robustness (& strength) can be measured by how nicely it handles slight changes in prompts; if it's able to handle well then the model is expected to be better
+- also called in-context learning because the model learns to do things what it learned during training 
+  - each example provided in the prompt is called shot - few shot prompting. the optimal number of shots needed requires experimentation
+- System Prompt and User Prompt:
+  - SP can be thought of as task description and UP as the task
+  - typically prompts by app developers are provided in SP and the user's input as UP
+  - we typically combine SP and UP into one prompt where UP follows SP
+  - SP can also help mitigate attacks because SP comes first and the models are better at processing initial instructs first
+- make sure to pass input in the format the model's chat template expects
+- Context length and efficiency:
+  - Context length has increased dramatically and some models provide 2 million context length which is equivalent to 10 books, 2000 wiki pages, or a small codebase like pytorch
+  - to evaluate the effectiveness of different parts of the prompt we can place a piece of info at different locations in the prompt and ask the model to find it
+  - we need to experiment with different prompt sizes to see which works best
+- Best Prompt Engineering Practices:
+  - we can use choose a prompt from the model provider to work with the quirks of a model
+  - write clear and explicit instructions
+    - ask the model to take a persona
+    - use examples
+    - specify the output format
+  - provide sufficient context to avoid hallucinations
+    - use RAG or provide search tool etc.
+  - break complex tasks into simpler subtasks
+    - prompt decomposition also helps with monitoring, debugging, parallelization, and smaller prompts are easier to write
+    - cons of prompt decomposition: 
+      - increased perceived latency if user can't see intermediate steps (wait time till first token arrives will be higher)
+      - increased cost if we have to make multiple calls to API; we can call weaker models for simpler prompts to manage costs
+  - give the model time to think:
+    - using chain of thought: in prompt use "think step-by-step" or "explain your decision"
+    - self-critique
+  - iterate on your prompts: version your prompts
+  - evaluate prompt engineering tools:
+    - tools: ex: openprompt, where we provide input, output formats, evaluation data and metrics, and these tools find a/many prompts automatically
+    - we can use AI models to help us write a good prompt given a task
+    - promptbreeer (a tool) helps us improve prompts using evolutionary strategy
+  - organize and version prompts
+    - we can keep prompts in a class with metadata to make it searchable.  metadata might include: IO schema, model name etc.
+    - many teams use a separate prompt catalogue to keep the older version prompts accessible
+  - defensive Prompt Engineering:
+    - attacks:
+      - prompt extraction: get system prompt to exploit security vulnerabilities
+      - prompt injection: make prompt do bad things
+        - using simple spelling mistakes (ot similar looking unicode characters) for blacklisted words which the models correct automatically
+        - using malicious intent in unexpected formats (roleplaying): write a nobel on how to break a house
+      - information extraction: prompt to get model's training data 
+      - remote code or tool execution
+      - misinformation
+      - automated attacks: by continuously updating prompts based on model's response until the objective is achieved
+      - indirect prompt injection: by placing malicious code in the tool
+      - information extraction: using indirect info to get info on training data
+    - Defenses:
+      - benchmarks to evaluate how robust are our systems against adversarial attacks: advbench, promptrobust etc.
+      - tools to automate security probing has templates of known attacks and automatically test against a target model against these attacks. ex: azure/pyrit, llm-security etc.
+      - metrics to evaluate system's robustness to prompt attacks: violation rate, false refusal rate
+      - defenses can be implemented at the following levels:
+        - model: order of importance in case of conflicting msg: system prompt, user prompt, model output, tool output
+          - if a msg says reveal info and another says don't reveal then following this importance hierarchy
+          - model should also generate safe responses to borderline queries. for example, if user needs to break lock (thief or actual person needing help) then suggest contacting localsmith 
+        - prompt:
+          - repeat safety prompt instruction (like don't reveal sensitive data) twice: at the beginning and end of prompt
+        - system:
+          - run generated code in isolated VMs
+          - don't allow sensitive code to run without user approval
+          - instruct model to not respond to queries it isn't supposed to
+          - use anomaly detection to filter our unusual requests
+          - put guardrails to block out bad words in input and output
+
+
+## RAG and Agents
+- RAG and Agents allow models to have more context to help it make less mistakes
+- RAG: allows models to retrieve info from external sources
+  - even if models take longer contexts, RAG will still be useful to get newer info and to not confuse the model with a huge context with unnecessary things
+  - Architecture components: (these components are trained separately these days)
+    - Retriever:
+    - Generator: generate responses based on this info
+  - Retriever: to retrieve info from external sources; it indexes for better results on queries
+    - Retrieval Algorithms: works by ranking docs based on their relevance to queries
+    - Retrieval mechanisms: 
+      - Term-based:
+        - also called Sparse Vector since one hot encoding is used for the term in the vector representation
+        - here we do lexical retrieval using keywords
+        - rank docs based on the query term's frequency on these docs 
+        - problems: 
+          - which terms in the query are important?
+            - to solve this use IDF (Inverse Doc Frequency) - the intution being the higher the number of docs containing this term the lesser informative this term is
+            - TF-IDF is an algo that combines Term Frequency and IDF to score a doc
+              - common term based retrieval engines: Elastic Search, BM25
+              - Elastic Search is based on a data structure called Inverted Index which is a dictionary that maps terms to the docs it appears in
+          - how to handle multi-word terms like hot dog for the words in the query?
+            - solution: use most common n-grams as the terms
+        - it is faster than embedding based, both for indexing and querying
+      - Embedding Based:
+        - unlike term based it uses semantic similarity; helps when query uses synonyms for example or multi-meaning words
+        - converted embeddings of chunks of doc are stored in a vector DB
+          - vector DB search based on nearest neighbour search. for faster results we can use Approximate Nearest Neighbour search
+          - Ex: FAISS, Google Scann
+          - Vector DBs organize data in buckets, trees or graphs
+          - Vector search algos: Locality Sensitive Hashing, Inverted File Index
+      - hybrid: cheaper term-based can be used for retrieval and expensive embedding based can be used to rerank them
+    - Metrics to evaluate RAG frameworks: 
+      - precision and recall
+      - to evaluate ranking of the docs: Mean Average Precision, Mean Reciprocal Rank, etc.
+      - evaluate embeddings independently (if similar docs are nearer) or using a benchmark
+    - Retrieval Optimization:
+      - Chunking Strategy:
+        - simplest strategy is to chunk docs with a fixed number of certain unit like characters, words, sentences or paragraphs.
+        - recursively split docs until a certain chunk size is achieved
+        - other: splitters for code; Q&A pairs for Q&A app; language specific chunking etc.
+        - we need to overlap adjacent chunks so that an important concept is not broken mid chunk and the important context appears in at least one chunk
+        - the overall chunk size should not be more than the context length of the generative or embedding model
+        - we can also chunk based on the generative model's tokenizer and build chunks on these token boundaries
+        - we need to experiment the optimal chunk size that works for us
+      - Reranking:
+        - a less expensive retriever retrieves the docs, and an expensive reranker reranks it 
+        - for time sensitive docs we can for example rerank to keep the latest docs on top
+      - Query rewriting:
+        - situation:
+          - Human: when was the last time x bought flowers?
+          - AI: last monday
+          - Human: what about y?
+            - this question needs the context of the above question otherwise we will get irrelevant answer
+        - query rewriting helps here by completing the question: when was the last time y bought flowers?
+          - this can be done using heuristics or using AI help - given this context expand the question "what about y" completely
+        - for queries like "how about his wife?", we need to search DB to get the wife's name first
+      - Contextual Retrieval:
+        - augment a chunk with metadata like tags and keywords for easy retrieval
+        - Ex: product reviews, image/video captions, error codes, questions it can answer, original doc's title and summary
+  - relevant chunks are retrieved and joined to feed to the model
+  - RAG beyond texts:
+    - using multimodal embedding like CLIP for image+text
+    - tabular data: convert text to sql (predict what tables to use), use the sql's result as the context
+- agents: 
+  - allows models to use tools to collect info for example using websearch or API calls
+    - agentic tools can do more than just create context
+  - agent is anything that can perceive it's env and act on that
+  - set of actions an agent can do is augmented by a set of tools
+  - Planning:
+    - for a complex task we need to ask the model to outline high level steps using chain-of-thought for example
+    - planning should be decoupled from execution since the model could come up with a plan of 1000 steps; we can define the high level plan and send it for refinement/execution
+      - we can evaluate a plan using human-in-the-loop or using heuristics
+    - we need to create a nice prompt to ask the model to plan and also provide the list of tools it can use in the prompt
+      - provide good descriptions to tools so that models can pick the right tools
+    - tool choices: required (use at least one tool), auto (model decides which tool to use)
+    - use natural language to specify steps so that if we change tool name in the future we don't have to finetune again
+    - Control flow:
+      - sequential: executing tasks in sequence
+      - parallel: executing tasks in parallel
+      - if statement
+      - loop: ex. keep generating number until a prime is generated
+      - AI models determine the control flow
+    - Reflection and error correction: usign React framework - reason, act, observe results
+  - Tools:
+    - categories:
+      - knowledge augmentation:
+      - capability extension: for example by providing mathematical tools or custom logic, code interpreters
+      - write actions: not only reads but also changes data
+    - Tool selection:
+      - we can explore some inventories like ToolFormer
+      - more tools makes the model more capable but choosing the right tool might become difficult
+      - no foolproof guide on how to select tools; we need to do experiments:
+        - compare how an agent performs with different set of tools
+        - ablation study: see how the performance degrades if a particular tool is removed
+        - look for tools where the agent makes most mistakes
+        - see which tools are most and least used
+  - Agent Failure Modes and Evaluation:
+      - wrong tool, parameter or argument
+      - Plan fail to achieve the goal or inefficient planning requiring many steps
+  - Memory:
+    - mechanism to allow a model to retain info
+    - an agent requires memory to store instructions, context, tools, plan, tool outputs, reflections, and more
+    - memory types:
+      - internal knowledge: training data
+      - short term: not persisted across tasks
+      - long term: persisted across tasks
+    - memory helps to not have session overflow with context and to provide consistent answers
+    - Memory management in short-term memory:
+      - FIFO
+      - remove redundancy using summaries of conversations
+      - handle contradicting info, for example by keeping only the latest info
+
+## Finetuning
+- it adapts a model by changing it's weights
+- we start with a model that has some capabilities but not all; the goal of finetuning is to adapt the model to our needs
+  - it helps model learn the same thing with less amount of data because the model is already pretrained on a huge amount of data
+- finetuning can be done in a supervised way with data labels or using reinforcement learning that maximize human preference
+  - long context finetuning: to finetune a model to increase it's context length
+- when to finetune?
+  - compared to prompt based methods it's expensive in data, hardware, and engineering work; so try to see if prompt based methods with context solves our problem
+  - finetuning optimizes token usage because providing context in prompts will require a higher number of tokens; but this is not much beneficial if we use prompt caching
+    - prompts however has a limit to the number of examples we can use; with finetuning there's no limit to the number of examples we can use
+  - use cases:
+    - to improve a english to standard sql model to work well on a special sql dialect
+    - to reduce bias by finetuning with a gender that did not appear in the training data
+    - distillation: finetune a small model to mimic output from a large expensive model
+  - demerits: finetuning can degrade performance on other tasks on which it was not finetuned
+- we use RAG if the info is wrong/outdated while we use finetuning to change the model's behaviour like the output format
+  - ex: the model can't produce correct html because the training data did not have much html (semantic parsing - converting natural language to structured format like json/yaml)
+- Memory Bottlenecks:
+  - memory required depends on number of trainable params during finetuning (frozen params are not updated)
+  - memory footprint depends on the model as well as the workload and optimization techniques
+  - memory needed for inference:
+    - during inference only forward pass is executed
+    - if number of params is N and memory for each param is M then the memory required to load the model params is N*M 
+    - the forward pass also requires memory for activation values
+    - transformer models need memory for key-value pairs of the attention mechanism
+    - the memory for activations and attention mechanisms grow linearly with batch size and sequence length (approx 20% of model params for a normal context sequence length and batch size)
+    - thus total memory: N * M * 1.2
+    - for a 13GB model with 2 byte params memory required = 13 * 2 * 1.2 = 31.2 GB
+  - memory needed for training:
+    - model weights + activations + gradients + optimizer states
+    - during backward pass each trainable param requires one value for gradient + 0 (vanilla Stochastic Gradient Descent) or 2 (adam optimizer) optimizer states
+    - for 13 billion param model using 2 bytes we need: 13 * 3 * 2 GB = 78 GB
+  - Numerical Representations:
+    - numerical values in NNs are typically stored as float numbers - most common is IEEE FP
+      - FP32 has 32 bits (single precision), FP64 has 64 bits (double precision), FP16 has 16 bits (half precision)
+    - FP32 and FP16 are most common in NNs
+    - other representations: BFloat16 by google which is optimized for TPUs;  and TensorFloat16
+    - number integers like INT8 (8 bits) and INT4 (4 bits) are also used
+    - the right format depends on our workload (how sensitive it is to precision) and hardware
+  - Quantization:
+    - reduce memory footprint by reducing precision
+    - we generally quantize weights and during post-training
+    - Inference Quantization: 
+      - training in higher precision and inference with lower precision has become common
+      - reduced precision also improves computation speed
+      - it allows large batch sizes
+    - it might degrade performance
+  - cpu offloading can help to load models that don't fit in the memory
+- Finetuning Techniques:
+  - PEFT: 
+    - Parameter Efficient Finetuning
+    - a finetuning approach that is memory efficient
+    - insert additional params in the model at right places. ex. insert 2 adapter models in each transformer block of BERT
+    - during finetuning the original model params are left unchanged, and only adapters are updated
+    - it increases inference time due to more number of added layers
+    - PEFT Techniques:
+      - LoRa:
+        - low rank adaptation
+        - uses modules that can be merged back to the original layers
+        - given a weight matrix it is decomposed to 2 smaller matrices which are trained and merged back to the original matrix
+        - based on low rank factorization where a matrix is decomposed into 2 smaller matrices
+        - different adapters can be used for different tasks keeping the same base model and use it for different tasks
+        - QLora: quantized lora - quantize to further reduce memory footprint
+      - soft prompts: add trainable tokens to input
+  - Model Merging and Multitask Finetuning:
+    - create a custom model by combining many models
+    - we can finetune multiple models in parallel and merge them back - reducing training time
+    - helps with on-device deployment
+    - methods to merge models:
+      - model weights are summed or weighted average are taken for the combined final model
+      - layer stacking 
+      - layer concatenation
+- Finetuning Frameworks: llama factory, PEFT, APIs provided by model/cloud providers
+- Fientuning Hyperparameters: learning rate, batch size, number of epochs
+
+## Dataset Engineering
+- steps:
+  - data curation: what and how much quality data is required?
+  - Data synthesis and processing
+- it is about getting required data and also how to delete old data and make the model unlearn this data
+- features of high quality data:
+  - relevance: for the task in hand
+  - aligned with task requirements: like does the task require factually correct or creative data?
+  - consistent annotations
+  - correctly formatted
+  - sufficiently unique
+  - compliant: handling PII
+- data coverage: 
+  - a model's training data should cover the range of problems we want to model to solve
+  - data coverage should also have sufficient diversity
+- how much data is required?
+  - the more the better
+  - how much data is needed depends on data quality, data diversity, task complexity, base model strength (strong models need less data to finetune because it already knows a lot of things)
+  - if we have less amount of data we can use PEFT on strong models, and if we have huge amount of data we can use full finetuning on weaker models
+  - we can start with small amount of high quality data to see if finetuning improves performance, and if yes, then we can curate more data
+- Data acquisition and annotation:
+  - gather sufficient, diverse and high quality data
+  - best data is from our own apps from actual users
+  - we can also look for data at data marketplaces
+  - annotating data needs precise guidelines
+  - data augmentation: create new data from existing data, for example by flipping an image
+  - data synthesis: to mimic actual data; using tools like faker
+    - used to crate high quality diverse data without privacy concerns
+    - techniques:
+      - use predefined rules and templates to generate synthetic data
+      - we can also add noise to data to generate new data
+      - simulate experiments virtually to generate new data
+      - using AI to generate data by paraphrasing for example
+    - to verify synthetic data we measure functional correctness and use AI as a judge
+    - Model Distillation:
+      - a smaller student model is trained to mimic a bigger teacher model
+      - synthetic data generated from bigger models can be used to train the smaller models and some smaller models are found to work nicely with only 4% size of the original model
+- Data Processing:
+  - Inspect data: 
+    - get data metadata, source, stats like num tokens, input length, response length etc.
+  - deduplicate data: use similarity scores and use techniques like hashing, pairwise comparison etc. 
+  - clean and filter data:
+    - clean html data, remove PII and copyright data, remove low quality data
+  - format data as per your task:
+    - tokenize, construct (instruct, response) pairs
+
+## Inference Optimizations
+- Inference Server: also responsible for receiving, routing, and possibly preprocess requests before they reach the inference engine
+  - Ex: model APIs provided by Google and OpenAI
+- Computational bottlenecks:
+  - compute bound: time to complete a task is determined by compute requirements like password decryption
+    - can be circumvented by using more chips or chips with higher computational power  (FLOPs/second)
+  - memory bandwidth bound: time to complete a task is determined by speed of data transfer between memory and processors
+    - ex: if we keep our data in cpu and train our model on gpu then we will have to transfer the data from cpu to gpu
+    - in short this is also called memory bound but memory bound could also mean tasks whose time to complete depends on memory capacity instead of memory bandwidth; this gives Out Of Memory errors
+    - can be circumvented by using chips with higher memory bandwidth
+  - these bottlenecks are classified based on their arithmetic intensity - number of ops required per byte of memory access
+  - NVIDIA Nsight is a tool to show us whether a task is compute or memory bandwidth bound
+- Inference for a transformer-based language model consists of 2 steps:
+  - prefill:
+    - models can process tokens in parallel, and the number of tokens that can be executed in parallel is compute bound
+  - decode:
+    - model outputs one token at a time and it requires loading large matrices into GPU. so this is memory bandwidth bound
+  - since both of these have different computational profiles, in prod they are used in separate machines
+  - bottlenecks of prefill and decode: context length, output length, request batching strategies
+- Inference API Types:
+  - online: optimize for latency (ex: chatbot)
+    - could still batch queries together if it does not affect latency
+    - streaming: to send tokens as soon as they are generated to reduce time to first token
+      - demerit: can't check the complete response for safety before sending to user
+  - batch: optimize for cost or throughput by batching requests together and using cheaper hardware; could lead to ~50% savings
+    - ex: recommendations, 
+- Inference Performance Metrics:
+  - latency:
+    - Time To First Token
+    - Time Per Output Token: should be faster than user's reading speed
+    - Time Between Tokens or Inter-Token Latency
+    - Time To Publish: the first token as user sees; for example for chain-of-thought like tasks where the user might not see the intermediate first token generated
+    - analyze latency in percentiles
+  - Throughput and goodput
+    - Throughput is number of tokens generated per second by an inference service across all users and requests
+      - can be measured in tokens per second or tokens per user or completed Requests Per Minute (helps to understand throttling for concurrent requests)
+    - cost is calculated based on the hardware's renting cost
+    - goodput: number of requests per second that satisfies the SLA
+  - Utilization Metrics:
+    - measures resource utilization efficiency i.e. proportion of resources actively used compared to available resources
+    - GPU Utilization: 
+      - computed using nvidia-smi
+      - if gpu is used for 5 out of 10 seconds then gpu utilizn is 50% even though in that 5s only 50% of GPU memory is used
+    - Model FLOPs utilizn:
+      - percentage of tokens generated compared to advertised peak number of token generation capability by the chipmaker
+    - Memory Bandwidth Utilizn:
+      - amount of bandwidth used for data transfer compared to available bandwidth
+  - AI Accelerators:
+    - lack of sufficiently powerful computers was a reason for AI winter in 1970s.
+    - An Accelerator is a computer chip designed to accelerate a particular type of compute workload
+      - GPUs can compute matrices that would otherwise require 1000s of CPUs
+      - CPU vs GPU:
+        - CPUs are designed for general usage whereas GPUs are designed for parallel processing
+        - CPUs have a few powerful cores which excel at single-threaded sequential tasks like IO, OS etc. whereas GPUs consists of a large number of less powerful cores optimized for tasks that can be broken down in simple tasks that can be computed in parallel like graphics generation or ML.  ML requires a lot of matrix multiplications which is highly parallelizable
+      - other chips inspired by GPU: TPU, QPU, LPU, AMD's GPU etc.
+      - currently research is going on for chips serving only inference, not training since inference workload can be way higher than training workloads
+        - training requires backprop and thus higher precision
+        - training optimizes for throughput whereas inference optimizes for latency
+        - inference optimized chips for less precision and less latency: Apple's Neural Engine, AWS Inferentia, Google TPU Edge, Nvidia Jetson, etc.
+      - there are also chips designed for specific models and data centers and consumer devices
+      - evaluate chips based on computational capabilities and memory bandwidth
+      - An Accelarator's memory is measured by its size and bandwidth.  An Accelerator like GPU interacts with these kinds of memories:
+        - CPU memory
+        - GPU high-bandwidth memory to be used by GPU
+        - GPU on-chip SRAM: integrated directly into the chip
+        - to efficiently utilize these memories we need to program for CUDA; pytorch and TF doesn't provide memory access
+    - Power Consumption: 
+      - to flip billions of transistors on and off; and to cool off the heating generated therefore
+      - nvidia A100 or H100 can have from 50-80 billion transistors
+      - electricity is a bottleneck in scaling up compute
+      - chip manufacturers provide max peak capacity required and max cooling required
+- Ideally optimizing a model for cost and speed should not degrade model's performance but some techniques do - some service provider's inference is better than others
+- can be done at the following levels:
+  - model: 
+    - decrease size of the trained model or improve the architecture
+    - Model Compression: using quanitzation and distillation
+      - distillation works when a subset of model params actually capture most of the task's essence
+      - pruning: deleting nodes or making the weights 0
+    - overcoming the autoregressive decoding bottleneck: current research topics:
+      - speculative decoding/sampling:
+        - a faster model generates some candidate tokens which the actual model (we want to use) verifies
+      - Inference with reference:
+        - use tokens from the input directly when a task allows to do so instead of generating all the tokens
+        - ex: minor changes to a huge code; or repeating some paragraphs from an input doc
+      - Parallel Decoding:
+        - instead of generating tokens sequentially one token at a time, we generate the next few tokens parallely because the context might be enough to predict the next few tokens
+      - Attention Mechanism Optimization:
+        - reuse K, V vectors for the subsequent generations
+      - Optimizing the kv cache size:
+        - vLLM gained popularity for optimizing kv cache in non-contiguous blocks improving fragmentation
+        - other methods include kv cache compression
+      - writing kernels for attention computation:
+        - using flash attention for example to fuse multiple ops together for efficient attention computation
+      - kernels and compilers:
+        - kernels are specialized pieces of code optimized for specific hardware accelerators like GPUs and TPUs
+        - kernels are written in lower level programming languages like CUDA for nvidia, triton for openai kernels etc.
+        - common techniques to improve speed:
+          - vectorization
+          - parallelization
+          - operator fusion
+        - lowering: converting script to hardware specific to run a model using compilers
+          - compilers can be standalone frameworks like Apache TVM or inference tools like Pytorch
+  - hardware: design more powerful hardware
+  - service: 
+    - optimizes model for a given hardware
+    - understand usage and traffic patterns to optimially allocate resources to reduce latency and cost
+    - techniques:
+      - batching: 
+        - static size
+        - dynamic: requests processed in 100ms window no matter how many the requests
+        - continuous: after a request is completing another request is taken to batch
+      - decoupling prefill and decode:
+        - assigning different GPUs to these tasks can improve speed
+      - Prompt Caching:
+        - caching large context docs or common system prompt
+      - parallelism:
+        - can be done on data and compute
+        - replica parallelism: create multiple replicas of the model to serve more requests
+          - fitting more models to GPUs optimally is a bin packing problem
+        - model parallelism: splitting a model into multiple machines
+          - techniques:
+            - tensor parallelism: when multiplying 2 matrices we can split the matrix column wise
+              - it helps when model does not fit in one machine
+            - pipeline parallelism: perform different steps in different machines. ex: each micro batch in different machines
+            - context parallelism: divide context into multiple machines
+
+
+## AI Engineering Architecture
+- simplest architecture: app receives user request -> sends to model -> responds user with model's response.  Improvements:
+  - context: enhance to provide more relevant context from external data and tools
+  - guardrails: to protect our system and users
+    - input guardrails: to stop bad prompts to go to API and to stop leaking sensitive data like PII to model
+    - output guardrails: stop toxic or bad responses
+      - retry if model did not respond nicely once 
+      - fallback on humans against bad response
+  - add model router and gateway: 
+    - for security and complex pipelines
+    - route different queries to different models using an intent classifier for queries for example
+    - gateway: unified wrapper to provide an unified interface for different models
+      - also helps with access control and costs
+      - route to alternate models if API fails or rate limit reached
+      - implement load balancing, logging, analytics etc.
+      - some gateways even provide caching and guardrails
+      - ex: MLFLow AI gateway, TrueFoundry
+  - caching: optimize for latency and costs
+    - exact caching: exact string search
+    - semantic caching: for similar sentences using vector search for example
+    - eviction policies: LRU, LFU etc.
+  - tools: to enhance model's capability
+  - add agent patterns: sequential, parallel, for loop, if condition etc.
+- Monitoring and Observability (specific to AI apps on top of foundation models):
+  - goal: to mitigate risk and discover opportunities for improvement
+  - metrics to evaluate observability quality:
+    - mean time to detection
+    - mean time to response
+    - change failure rate: percentages of changes/deployments that require rollback/fix
+    - metrics related to API costs, IO tokens
+    - cache's hit rate
+    - for open-ended responses we need creativity to come up with metrics to monitor
+      - format failures, factual consistency, conciseness, toxicity 
+      - these can be created using AI as a judge
+    - unusual queries
+    - model quality can also be inferred from user's feedback like number of turns per conversation, how often user stops response midway etc.
+    - retrieval quality in RAG; retrieval latency etc.
+    - user related: Daily Active Users, session time, number of subscribed users etc.
+  - Logs and Traces:
+    - Logs and Traces are not aggregated like metrics
+    - Logs are a series of disjoint events, while traces belong to one transaction or process
+  - Drift detection:
+    - changes in prompt, user behaviour or model
+- AI pipeline orchestration:
+  - to orchestrate multiple models, external data sources, and tools by creating an end to end pipeline
+  - do parallel processing wherever possible
+  - Ex: langchain, llama index, langflow etc.
+  - before using an orchestrator we need to check what models and frameworks it supports
+
+
+## User Feedback
+- in AI apps user feedback provides competitive advantage
+- user feedback can be used to personalize models and to train future models
+- implicit feedback: the way an user directs the model to respond like be concise, or user says "no i did not mean that"
+- use RL to learn from user feedback
+- early termination: means conversation is not going well
+- we can allow user edits to responses and take this data for training
+- sentiment analysis from user inputs
+- feedback from user behaviour:
+  - output regeneration might mean user was not satisfied from the previous output
+  - update to conversation like delete/edit might mean that conversation went bad
+  - conversation length combined with dialogue diversity: long conversation in the same topic might mean that user is getting repeated output
+- when to collect feedback?
+  - users should be able to provide feedback throughout the journey
+- for image related tasks there should be an option to select a part of the image that the user wants to give feedback for
+- show 2 responses for the user to compare
+- ask feedback from 1% users to not disrupt everyone
+- for coding assistants if user types tab to autocomplete it can be considered a positive feedback because the user accepted the proposed changes
+- Feedback Limitations:
+  - biases: leniency, position bias, preference bias etc.
+  - degenerate feedback loop: we get feedback for the things we show 
+    - if user clicks the first video they see it might suggest that video is good and it will come as a first suggestion more, and the other videos will miss the chance to appear first
