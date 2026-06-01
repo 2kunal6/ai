@@ -1,0 +1,42 @@
+## Intro
+- ML: a computer is said to learn from experience if it improves on a performance criteria for a task with more data
+  - it is required when:
+    - otherwise we will have to write too many rules like for spam detection with keyword based rules.  In addition we will have to continuously keep updating these rules with new data
+    - no algorithm yet exists, for example to detect words from voice
+- types:
+  - based on if supervision required:
+    - supervised:
+      - each sample has a label which is the desired solution
+      - Ex: knn, logistic regression, linear regression, support vector machines, decision trees, neural networks etc.
+    - unsupervised:
+      - here the training data is unlabeled
+      - ex: clustering, anomaly detection, novelty detection, dimensionality reduction, association rules
+        - novelty detection is finding instances that look different from others
+    - semi-supervised:
+      - finding labels for data is hard; some algos can work well with partially labeled data
+      - ex: we can infer that a person in photo a, b, and c are same; now if we label any one of them then we have the labels for all of them
+    - reinforcement learning (RL):
+      - an agent observes it's environment and takes an action for which it gets a reward/penalty. Over time it updates it's policy to maximize the reward earned
+      - ex: alpha go
+    - based on whether a system can learn incrementally:
+      - offline learning (batch learning):
+        - must be trained using the all data; just adding new data does not help
+        - once learned it is deployed to prod where it just serves inference and does not learn anymore
+      - online learning:
+        - learns incrementally with individual or mini-batches of data; we can throw out the data after learning
+        - good when we get continuous flow of data like stock market price
+        - good for when resources are low when we can't fit the entire data in memory (out of core learning)
+        - learning rate: if it's high then the algo quickly forgets the old data
+        - since it's sensitive to new data, the performance can drop significantly with new noisy data - monitor and revert to old version if performance drops
+    - based on how the models generalize:
+      - instance-based learning:
+        - learn by heart
+        - decide based on closeness to the training instances
+        - ex: knn - if a msg has similarity with a spam msg in training data then mark it as spam
+        - disadvantage: does not generalize well; could identify a msg wrongly as spam
+      - model-based learning:
+        - build a model based on training data and use these models for prediction
+        - ex: linear regression
+- Terminology:
+  - sample: each training example is called a sample or training instance
+  - features/predictors/attributes: columns or dimensions of the training data
