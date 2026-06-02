@@ -37,6 +37,115 @@
       - model-based learning:
         - build a model based on training data and use these models for prediction
         - ex: linear regression
+- Main Challenges of ML:
+  - insufficient quantity of training data:
+    - simple tasks might require thousands of examples, and complex tasks like speech or image recognition might require millions
+    - a paper by microsoft showed that sometimes simple models work in par with complex models with high quality enough data
+    - but getting good quality data is costly
+    - so we need a balance between investing on ml algos and data gathering
+  - non-representative training data:
+    - it is crucial to use training data that is representative of the cases we want to generalize.
+    - if the sample is small then we will have sampling noise or we can have sampling bias if the training data is big but does not representative
+  - poor data quality:
+    - if there are errors, outliers or noise in the training data
+    - for missing data we can choose to:
+      - remove it
+      - fill in the missing data with the median value if it makes sense
+      - we can train a model with and without the missing data
+  - Irrelevant features:
+    - a model is able to learn if it contains relevant features and not too many irrelevant features
+    - feature engineering: coming up with relevant features:
+      - feature selection: selecting most important features to train on among existing ones
+      - feature extraction: combining existing features to come up with a more useful one
+        - dimensionality reduction can help here
+      - creating new features by gathering new data
+  - overfitting the training data:
+    - model works well on training data but does not generalize well 
+    - here model finds patterns in noise, and therefore it does not generalize well
+    - overfitting happens when the model is too complex compared to amount and noisiness of the training data
+    - solutions:
+      - regularization:
+        - choosing a simpler model with fewer params like linear over polynomial model
+        - it might not fit the actual training data as good as an overfitted model but it will generalize well to new data
+        - amount of regularization can be controlled using hyperparameters
+      - collect more training data
+      - remove outliers and noise
+  - underfitting the training data:
+    - model is too simple to learn the underlying training data well
+    - solutions:
+      - use a more complex model with more params
+      - choose nice features for training
+      - reduce the regularization param
+- Testing and Validation:
+  - split your training data into training and test set and evaluate your model on the test set (which was not used for training) to get an estimate of the error rate on new cases (generalization or out-of-sample error)
+  - generally 80-20 split for train and test data is considered good but depends on data size (100000 sample of test data even if it is 1% is good)
+  - Hyperparameter Tuning and model selection:
+    - for hyperparameter selection we can use 100 hyperparam values and train 100 times, but the generalization error in production won't be good because we used test data too many times
+      - solution is to use a validation set (or hold-out set or development set). steps:
+        - we train multiple models on train-set minus validation set and select the model that performs best on the validation set
+        - now we train the model on train-set + validation-set to get the final model
+        - evaluate this final model on test-set to estimate the generalization error
+        - this is problematic if the validation set is too big or small. if validation set is small then the evaluations will be imprecise and if is big then the training set will be small. so we use repeated cross-validation using many small validation sets
+          - each model is evaluated once per validation set after training on rest of the data. now, by averaging out all evaluations of the model we get a more accurate picture of the model's performance
+          - drawback: training time is multiplied by the number of validation sets
+  - Data Mismatch:
+    - validation and test set must be representative of the data we expect to use in prod.
+    - use train-dev set for these situations
 - Terminology:
   - sample: each training example is called a sample or training instance
   - features/predictors/attributes: columns or dimensions of the training data
+  - No Free Lunch Theorem: no single ML algo is best for every possible problem.  Therefore we need to make assumption about the data and try out models that is likely to work in that situation well. 
+    - Ex: we can assume/check that the data is simple so simple linear models will work and if the task is complex then complex neural networks might be required. 
+
+
+## End to End ML Project
+- steps:
+  - look at the big picture:
+    - frame the problem based on business objective
+    - find the current solution to base a reference and to get more insights
+    - select a performance measure like RMSE or MAE
+      - RMSE is the l(2) norm or euclidean norm
+      - MAE is the l(1) norm or the manhattan distance
+      - generally, l(k) norm is = pow (pow(v(0), k) + .. + pow(v(n), k), 1/k)
+      - the higher the norm index, the higher it focuses on higher values and ignores the small ones.  
+        - Therefore RMSE is more sensitive to outliers than MAE. So for exponentially low outliers like bell-curve, RMSE performs well
+        - higher norm index focuses on higher values because I think the power explodes the higher values (including decimal values <1) to bigger values.  
+  - gather data
+  - visualize and run basic statistics to get a feel for the overall data
+    - pandas dataframe:
+      - df.head(): to see first few rows
+      - df.info(): to see number of rows, column types, number of non-null values in each column etc.
+      - df.describe(): to see basic stats like mean, median, percentile values for numerical data
+      - df.hist(): to get the number of values for each column
+      - df['column_name'].value_counts(): to see number of rows for each value
+    - matplotlib for viz
+    - find correlations in data
+  - prepare data:
+    - handle scales
+    - make changes to make the data which are tail-heavy (extend much right or left of the median) to more bell-curve like 
+    - create a test-set and set it aside to avoid data snooping bias
+      - data snooping bias is a statistical error where we test multiple hypothesis on same data until a desired solution is reached. this is because the more hypothesis we use the more chance there is to find a correlation by pure luck because the hypothesis might end up memorizing the noise
+      - scikit-learn's train_test_split with a seed value
+      - use stratified sampling to have stratas of each representative group like for each income category
+    - delete unnecessary features, combine existing ones to create necessary features, etc.
+  - choose an ML model
+  - train the model
+  - finetune
+  - present the solution
+  - deploy and monitor
+- Terminology:
+  - x<sup>(i)</sup> is the vector of all feature values and y<sup>(i)</sup> is the label for the i'th instance
+  - X is a matrix containing all values
+    - X = [transpose(x(1))]
+          [transpose(x(2...))]
+          [transpose(x(n))]
+  - h is the system's prediction, also called the hypothesis
+    - y-hat(i) = h(x(i))
+  - RMSE(X, h) is the cost function measured on the examples based on the hypothesis h
+  - regression types:
+    - based on input:
+      - multiple regression: use multiple features to predict
+    - based on output:
+      - univariate: output only a single value
+      - multivariate: output multiple values
+  - 
