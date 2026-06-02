@@ -128,6 +128,36 @@
       - scikit-learn's train_test_split with a seed value
       - use stratified sampling to have stratas of each representative group like for each income category
     - delete unnecessary features, combine existing ones to create necessary features, etc.
+    - Data Cleaning:
+      - handling missing values:
+        - drop rows
+        - drop entire column: if most values missing
+        - fill with a value like mean, median, etc.
+          - either we can do it manually with pandas data frame function or scikit-learn's imputer function
+    - handling text and categorical attributes:
+      - categorical attributes are the one with a limited set of values.  ML algos expect numerical values, so to convert categorical attributes to numerical values:
+        - ordinal_encoding: 
+          - assigns a numerical value to each 
+          - demerit: ml algo may falsely assume 2 nearby values to be similar
+        - one-hot encoding: create a different column for each distinct value and mark it 1 and others as 0
+          - uses scipy sparse matrix
+          - when number of distinct values are high then one-hot-encoding will generate many input features which will slow down training. solution:
+            - convert them to a sensible integer like country_population instead of country code
+            - representation learning: use a learnable low dimensional vector called embedding which will be learned during training
+    - Feature Scaling:
+      - ml algos do not work well when the input has different scales among one column or across columns
+      - 2 common ways to scale input:
+        - min-max scaling (or normalization): 
+          - (x - x_min) / (x_max - x_min)
+          - by default the range is between 0-1 but we can change it
+        - standardization: 
+          - first it subtract the mean value (to have 0 mean) and then divides by standard deviation to have a unit variance
+          - unlike min-max scaling it does not bound the value to a specific range which might be a problem for some situations like neural networks does not work nicely with high values
+          - it is less sensitive to outliers. ex. if by mistake a value of 100 appears instead of 10 and the rest of the values are between 0-15 then min-max scaling will squash all other values to 0-0.15 and one value with 1
+      - as with all transformations, scaling need to be done only on the training data, not test data
+    - sklearn's pipeline class helps with making many transformations sequentially.  All but the last estimator must be transformers (has fit_transform())
+      - to handle numerical and categorical attributes together there's a ColumnTransformer
+      - when there's a mix of sparse and dense matrices, the ColumnTransformer estimates the density of the final matrix and provides a dense/sparse matrix on a threshold=0.3
   - choose an ML model
   - train the model
   - finetune
@@ -148,4 +178,3 @@
     - based on output:
       - univariate: output only a single value
       - multivariate: output multiple values
-  - 
