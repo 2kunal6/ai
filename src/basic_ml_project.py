@@ -1,3 +1,11 @@
+'''
+TODO:
+- sklearn's k-fold cross validation
+- sklearn's grid search for hyperparameter finetuning, RandomizedSearchCV
+- find out how confident the predictions are
+'''
+
+
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.compose import ColumnTransformer
@@ -53,6 +61,7 @@ def convert_categorical_to_numerical_converter(X):
     return ColumnTransformer(
         transformers=[
             ("cat", OneHotEncoder(handle_unknown="ignore"), categorical_cols),
+            # extend to standardize numerical columns
             ("num", "passthrough", numerical_cols)
         ]
     )
@@ -78,9 +87,10 @@ def main():
     preprocessor = convert_categorical_to_numerical_converter(X)
     X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, test_size=0.2, random_state=42)
 
-    model = get_model_pipeline(preprocessor)
-    model.fit(X_train, y_train)
-    y_pred = model.predict(X_test)
+    model_pipeline = get_model_pipeline(preprocessor)
+    model_pipeline.fit(X_train, y_train)
+    # using pipeline to predict automatically applies the same transformations to X_test; hence, no need to do transform X_test separately
+    y_pred = model_pipeline.predict(X_test)
 
     evaluate(y_test, y_pred)
 

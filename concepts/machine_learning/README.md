@@ -158,11 +158,42 @@
     - sklearn's pipeline class helps with making many transformations sequentially.  All but the last estimator must be transformers (has fit_transform())
       - to handle numerical and categorical attributes together there's a ColumnTransformer
       - when there's a mix of sparse and dense matrices, the ColumnTransformer estimates the density of the final matrix and provides a dense/sparse matrix on a threshold=0.3
-  - choose an ML model
-  - train the model
-  - finetune
-  - present the solution
-  - deploy and monitor
+  - choose a ML model:
+    - make sure that the model does not overfit or underfit 
+    - try a few promising models and save them using python's pickle model if we want to come back to it later
+  - train and evaluate the model 
+    - cross-validation:
+      - sklearn's k-fold cross-validation feature
+        - it expects an utility function (higher is better) not a cost function (lower is better). so the scoring is calculated with negative values
+      - split the training set into say 10 distinct subsets called folds, then train and evaluate the Decision Tree model 10 times, picking a different fold for evaluation each time and training on the other 9 folds
+        - the result is an array with 10 evaluation scores
+  - finetune:
+    - grid search: 
+      - try many values of hyperparams and choose the best one
+      - scikit learn's GridSearchCV helps with this by training using cross-validation with all combination of hyperparam values
+        - trains cross-validation times for each combination
+        - default option is to refit the model with the best params found here
+      - trying out powers of 10 for hyperparameter values is generally a good idea
+    - randomized search:
+      - values are searched randomly until x number of iterations
+      - sklearn's RandomizedSearchCV
+    - ensemble models:
+      - use a group of best models
+      - this performs good if the models make errors on different types
+    - analyze the best models and their errors:
+      - we can find importance of features leading to good/bad solutions
+      - we can also analyze about why some error occurred and work on them
+    - evaluate your model on the test set:
+      - find out how confident the predictions are 
+  - present the solution:
+    - what worked what did not work with probable reasons
+    - document the assumptions made and the system limitations
+  - deploy and monitor:
+    - save entire preprocessing and prediction pipeline using joblib; and load this entire pipeline in prod for prediction
+    - we can also simply upload the joblib file to GCS and create a model
+    - monitor to see if model is rotting over time because the training data on which the model was trained on gets older with time, and at some point might not reflect the current reality
+    - automate to train the model every day/week/month and replace the current one if it is better
+    - also monitor input to see if input quality is degrading; for example the input containing lots of missing values because a sensor have malfuncioned, or standard deviation of a value deviates too much from training data, or a categorical column is having a new category, etc.
 - Terminology:
   - x<sup>(i)</sup> is the vector of all feature values and y<sup>(i)</sup> is the label for the i'th instance
   - X is a matrix containing all values
