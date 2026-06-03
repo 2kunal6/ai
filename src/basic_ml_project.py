@@ -1,34 +1,89 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import OneHotEncoder
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import OneHotEncoder, LabelEncoder
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report
 
-
+#########################################################
+# set display option to show all columns
 pd.set_option('display.max_columns', None)
-
-df = pd.read_csv("AI_Impact_on_Jobs_2030.csv")
-print(df.info())
-print(df.head())
-print('\n\nnull values:')
-print(df.isnull().sum())
-print('\n\n')
-
-# No null values so removing them is not required.
-# choices for removal: remove rows, remove columns with a lot of nulls, imputation (replace null values with mean, median, embedding, etc.)
-
-train_set, test_set = train_test_split(df, test_size=0.2, random_state=42)
-
-categorical_cols = df.select_dtypes(
-    include=["object", "category"]
-).columns.tolist()
+#########################################################
 
 
-preprocessor = ColumnTransformer(
-    transformers=[
-        ('cat', OneHotEncoder(handle_unknown='ignore', sparse_output=False), categorical_cols),
-    ]
-)
+def get_basic_info(df):
+    print('#' * 25)
+    print('#' * 25)
+    print('INFO:\n')
+    print(df.info())
+    print('#' * 25)
+    print(f'SOME SAMPLE VALUES:')
+    print(df.head())
+    print('#' * 25)
+    print('NULL COLUMNS:')
+    print(df.isnull().sum())
+    print('#' * 25)
+    print('#' * 25)
 
-df_numerical = preprocessor.fit_transform(df)
-print(df_numerical)
+
+def handle_null_values(df):
+    pass
+    '''
+    - No null values so removing them is not required.
+    - choices for removal: 
+        - remove rows
+        - remove columns with a lot of nulls
+        - imputation (replace null values with mean, median, embedding, etc.)
+    '''
+
+def extract_label_column(df, label_column_name):
+    y = df[label_column_name]
+    X = df.drop(columns=[label_column_name])
+    label_encoder = LabelEncoder()
+    y_encoded = label_encoder.fit_transform(y)
+    return X, y_encoded
+
+def convert_categorical_to_numerical_converter(X):
+    categorical_cols = X.select_dtypes(include=["object", "category", "string"]).columns
+
+    numerical_cols = X.select_dtypes(exclude=["object", "category", "string"]).columns
+
+    # Preprocessing
+    return ColumnTransformer(
+        transformers=[
+            ("cat", OneHotEncoder(handle_unknown="ignore"), categorical_cols),
+            ("num", "passthrough", numerical_cols)
+        ]
+    )
+
+def get_model_pipeline(preprocessor):
+    return Pipeline([
+        ("preprocessor", preprocessor),
+        ("classifier", RandomForestClassifier(
+            n_estimators=100,
+            random_state=42
+        ))
+    ])
+
+def evaluate(y_test, y_pred):
+    print("Accuracy:", accuracy_score(y_test, y_pred))
+    print(classification_report(y_test, y_pred))
+
+def main():
+    df = pd.read_csv("AI_Impact_on_Jobs_2030.csv")
+    get_basic_info(df)
+    handle_null_values(df)
+    X, y_encoded = extract_label_column(df, 'Hiring_Trend_2026')
+    preprocessor = convert_categorical_to_numerical_converter(X)
+    X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, test_size=0.2, random_state=42)
+
+    model = get_model_pipeline(preprocessor)
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
+
+    evaluate(y_test, y_pred)
+
+
+if __name__ == '__main__':
+    main()
