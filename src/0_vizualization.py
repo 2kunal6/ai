@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 pd.set_option('display.max_columns', None)
 
-df = pd.read_csv("AI_Impact_on_Jobs_2030.csv")
+df = pd.read_csv("resources/AI_Impact_on_Jobs_2030.csv")
 
 print(df.info())
 print(df.describe()) # null values are ignored here

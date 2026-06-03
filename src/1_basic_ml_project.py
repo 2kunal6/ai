@@ -80,7 +80,7 @@ def evaluate(y_test, y_pred):
     print(classification_report(y_test, y_pred))
 
 def main():
-    df = pd.read_csv("AI_Impact_on_Jobs_2030.csv")
+    df = pd.read_csv("resources/AI_Impact_on_Jobs_2030.csv")
     get_basic_info(df)
     handle_null_values(df)
     X, y_encoded = extract_label_column(df, 'Hiring_Trend_2026')
