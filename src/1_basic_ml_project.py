@@ -36,14 +36,16 @@ def get_basic_info(df):
 
 
 def handle_null_values(df):
-    pass
     '''
     - No null values so removing them is not required.
     - choices for removal: 
         - remove rows
         - remove columns with a lot of nulls
         - imputation (replace null values with mean, median, embedding, etc.)
+        - when there's a strong correlation between missing values and target label, mark it as MISSING to preserve the correlation
+            - note: keeping 100% correlated column might be bad because this might overfit with those columns
     '''
+    pass
 
 def extract_label_column(df, label_column_name):
     y = df[label_column_name]

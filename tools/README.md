@@ -1,5 +1,8 @@
 ## Pandas
 - crosstab
+- inplace:
+  - by default pandas dataframes are not inplace
+  - df.dropna(inplace=True) is discouraged compared to df = df.dropna() because the latter supports chaining better
 
 ## scikit-learn
 - all objects in scikit-learn's API share a consistent interface

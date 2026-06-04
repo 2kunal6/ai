@@ -134,6 +134,8 @@
         - drop entire column: if most values missing
         - fill with a value like mean, median, etc.
           - either we can do it manually with pandas data frame function or scikit-learn's imputer function
+        - when there's a strong correlation between missing values and target label, mark it as MISSING to preserve the correlation
+          - note: keeping 100% correlated column might be bad because this might overfit with those columns
     - handling text and categorical attributes:
       - categorical attributes are the one with a limited set of values.  ML algos expect numerical values, so to convert categorical attributes to numerical values:
         - ordinal_encoding: 
@@ -213,3 +215,9 @@
 
 ## Classification
 - 
+
+
+## Miscellaneous
+- Handling null values:
+  - many traditional ML algos in sklearn like Logistic Regression, Linear Regression, kNN, K-means, SVM, etc. cannot handle null values
+  - some algorithms like XGBoost, HistGradientBoosting, etc. can handle null values
