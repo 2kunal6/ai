@@ -11,6 +11,7 @@
     - axis=0: drop a row
     - axis=1: drop a column
 
+
 ## scikit-learn
 - all objects in scikit-learn's API share a consistent interface
   - estimators:
@@ -34,3 +35,4 @@
   - uses sensible defaults
   - composition: ex. it's easy to create a pipeline by combining transformers
 - cross_val_predict() vs cross_val_score()
+- StandardScaler

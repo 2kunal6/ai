@@ -402,7 +402,71 @@
 
 
 ## Support Vector Machines (SVM)
-- 
+- powerful and versatile ML algo that is capable of linear and non-linear regression, classification, and outlier detection
+- it is particularly useful for classification of small to mid-sized datasets
+- Linear SVM Classification (SVC:
+  - the decision boundary should separate the classes and should stay as far away as possible from the existing instances so that there is room for generalization
+  - large margin classification: fitting the widest street between the classes
+  - support vectors: these instances define the boundary of the street
+  - it is sensitive to scaling because the widest road might be narrowed down by a small scale
+  - hard margin classification: instances are strictly off the street and on the correct side
+    - drawbacks: this works only for linearly separable data, and is sensitive to outliers
+  - soft margin classification:
+    - finds a good balance between making the decision boundary as wide as possible, and limit decision boundary violations
+    - using hyperparam C in sklearn's implementation: if model overfits then reduce c to regularize for better generalization
+  - linear SVC regularizes the bias term, so we should center the training data by subtracting the mean. this is standard if we use the standard scaler
+  - also use hinge loss as it is not the default value
+  - also set dual hyperparam=False for better performance unless there are more features than training instances
+  -Instead of Linear SVM, we can use an SVC class with a linear kernel
+    - it uses stochastic gradient decent and it does not converge as fast as linear SVM but it can be used for online training or when the datasets don't fit in memory
+- Non-Linear SVM Classification: 
+  - for datasets that are not linearly separable.
+  - techniques to handle:
+    - one approach is to add more polynomial features that are linearly separable - and use linear classification
+      - pipeline with PolynomialFeatures transformer + StandardScaler + LinearSVC
+      - it is simple to implement and can work well with many different ML algos
+      - drawback: low polynomial degree don't always work well and high polynomial degree introduces a lot of features
+    - kernel trick:
+      - using it we can get the same result as if introducing high degree polynomials without adding them
+      - no feature explosion
+      - sklearn SVC with kernel="poly", degree=x
+        - if overfitting reduce degree and if underfitting increase degree
+      - to find the right hyperparam use grid search 
+      - Mercer's Theorem states that loosely there exists a hyper-dimensional space where a lower dimensional function will be linearly separable
+    - Similarity Features:
+      - add features computed using a similarity function, which resembles how much each instance matches a particular landmark
+      - for example, if there are 2 landmarks and we use a gaussian radial basis function (RBF) as the similarity measure then we can compute the similarity value based on a function of the distance of each instance to the 2 landmarks
+      - this might make the data linearly separable
+      - the simplest approach is to create a landmark at each instance. this increases the make the data linearly separable but will increase the number of features
+    - gaussian RBF:
+      - uses kernel trick to find similar results but without being too computationally expensive like above
+    - string kernels are sometimes used for text classification, ex. using the string subsequence kernel or levenstein distance
+    - which one to use?:
+      - LinearSVC is faster than linear-kernel, especially if training set is huge or it has many features
+      - if training set is not too large we can also try gaussian rbf kernel
+      - try others if there is time and compute
+- Computational Complexity:
+  - LinearSVC: O(m * n) - sklearn's implementaion does not use the kernel trick but some other optimization
+    - the algo takes longer if we need a very high precision - controlled by hyperparameter.  In most cases the default tolerance is fine
+  - SVC class: O(m^2 * n) or O(m^3 * n) - based on kernel trick
+    - slow for large number of instances
+    - good for complex but small/mid-sized datasets
+    - scales well with number of features, especially sparse features
+- SVM Regression:
+  - tries to fit in as many as possible instances on the decision boundary street allowing some violations
+  - the width of the decision boundary street is controlled by a hyperparam
+  - sklearn's LinearSVR
+    - the SVR class is the regression equivalent of SVC class, and LinearSVR is equivalent of LinearSVC
+    - LinearSVR scales well with number of training instances, while it gets slow for SVR just like their equivalents
+  - non-linear regression:
+    - use kernelized SVM model
+- Training:
+  - linear SVM classifier:
+    - 1 if (transpose(w).x + b) >= 0; else 0
+    - we need to find w and b such that the decision boundary street is widest while avoiding small margin violations
+- Online SVMs:
+  - using Gradient Descent (SGDClassifier) but it converges slowly 
+  - using kernelized SVMs
 
 ## Miscellaneous
 - Handling null values:
