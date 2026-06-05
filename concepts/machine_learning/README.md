@@ -214,10 +214,210 @@
 
 
 ## Classification
-- 
+- Types:
+  - binary:
+    - Logistic Regression, SVM classifiers, etc. are strictly binary but we can adapt them to multi-class
+    - one-vs-rest or one-vs-all: Ex. to create a model that identifies 10 integers, we can create 10 classifiers for each digit and choose the strongest one 
+    - one-vs-one: create (n c 2) classifiers - one for each pair - and choose the one that wins the most duets
+  - multi-class:
+    - SGD, RandomForest, Bayes, etc. are able to handle multi-class classification natively
+  - multi-label:
+    - assign multiple labels to an instance
+    - ex. face recognition for multiple people in an image
+    - algo: kNeighboursClassifier
+    - metric: use F1 score for each label; to compute the aggregation we can take average of the individual labels scores or we can use an weighted score for when a particular class count is skewed
+  - multioutput classification:
+    - also called multioutput-multiclass classification
+    - it's a generalization of multilabel classification where each label can also be multiclass
+- Performance Measures:
+  - accuracy:
+    - accuracy is not a good performance measure if classes are skewed
+    - because let's say we have 1% labels of class=sick and 99% labels of class=not-sick then if we randomly predict each class to be class=non-sick we will have a 99% accuracy - but this is not good -- for these cases identifying sick as non-sick could be disastrous
+  - Confusion Matrix:
+    - FP (False Positives), TP (True Positive), FN (False Negative), TN (True Negative)
+    - precision = TP + (TP + FP)
+    - recall = TP + (TP + FN)
+    - F1-score:
+      - helps with comparing 2 classifiers
+      - it is the harmonic mean of precision and recall i.e. 2 / (1/precision) + (1/recall)
+      - regular mean treats all values equally but harmonic mean gives more weight to smaller values.  Therefore a classifier will get a higher score only if both it's precision and recall is higher
+      - it favours classifiers with similar precision and recall
+    - precision recall tradeoff: 
+      - increasing precision reduces recall and vice-versa because generally a threshold value is used and if we move the threshold value then prediction will move towards that
+      - we can choose one or the other based on situations
+      - which threshold to use?
+        - precision recall curve:
+          - first use cross_val_predict() to find predicted probability values for all the folds
+          - now use precision recall curve to compute precision and recall for all possible thresholds
+          - plot the precision and recall values and choose a suitable value
+          - we can also plot precision against recall and choose a value just before when precision starts falling sharply
+          - we can choose any precision value we want but recall might be sacrificed
+        - ROC Curve:
+          - Receiver Operating Characteristic Curve
+          - plots True Positive Rate (TPR which is another name for recall) against False Positive Rate (FPR)
+            - FPR is ratio of negative instances classified as positive
+            - 1 - True Negative Rate (TNR)
+              - TNR:
+                - is ratio of negative instances correctly classified as negative
+                - TNR is also called specificity
+          - Thus ROC plots recall vs 1-specificity
+          - tradeoff: the higher the recall the more FPR the classifier produces
+          - one way to compare classifiers is to find the Area Under the Curve of ROC
+            - a good classifier has AUC ROC close to 1; and a bad one has it close to 0.5
+        - PRC vs ROC?
+          - use PRC when:
+            - number of positive class is few (like 10% times or so)
+            - or when we care about the False Positives more than False Negatives
+          - ROC:
+            - other cases
+        - both the above strategies are for binary classification by default but we can extend it to multi-class classification using strategies like one-vs-rest
+- Classifiers:
+  - SGDClassifier:
+    - Stochastic Gradient Descent Classifier
+    - handles training instances independently one at a time. therefore:
+      - handles very large datasets efficiently
+      - works well for online learning
+    - it works with randomness; therefore if we want non-randomness we can use a seed param
+    - we can use the decision_method() and use a threshold value if we don't want to use the default one
+  - RandomForestClassifier:
+  - Support Vector Machines:
+    - scale poorly with input size; so one-vs-one strategy is preferred for multi-class (since SVM is binary classifier by default)
+      - with one-vs-one strategy the training set is divided into small subsets; for other binary classifiers one-vs-rest is generally preferred
+- Error Analysis:
+  - analyze the confusion matrix:
+    - see percentage of errors in each row
+    - if the errors is for a particular column then we might have to collect more data for that column so that the model can identify it better; or write algorithms to identify it better
+  - we can also see individual errors to find if there is a pattern
+- Multilabel Classification: 
 
+
+## Training Models
+- Linear Regression:
+  - linear model: y-hat = h-theta(x) = theta . x (dot product) = theta-0 + theta-1 * x-1 + ... ++ theta-n * x-n
+    - theta is the weight vector and x is the input feature vector
+  - goal of training is to find the value of theta that minimizes the RootMeanSquaredError (RMSE or equivalently MSE)
+    - MSE = MSE-individual(0) + ... + MSE-individual(m), where
+      - MSE-individual(i) = (theta-transpose(x(i)) - y(i)) ** 2) 
+      - m = number of rows/instances
+      - normal equation: a formula that gives the answer directly for the optimum theta for min MSE based on matrix transposes
+  - scikit's LinearRegression implementation used Singular Value Decomposition:
+    - complexity: O(n^2) i.e. if we double the number of features the computation increases by 4 times
+    - both the normal equation and SVD slows down when the number of features increases (eg. 100, 000)
+    - but both are linear in the number of training examples (O(m)) - so they can handle large training sets efficiently provided they fit in memory
+    - predictions are fast - linear in both number of instances and features
+- Gradient Descent:
+  - way to train a linear regression model when there are a large number of features, or when the training set can't fit in memory
+  - generic optimization algo which tweaks params to reduce a cost function by moving in the negative gradient direction
+  - it finds local optimum, and it is not guaranteed to find the global minimum
+  - but MSE error function is a convex function with no local minima, so GD will find global minimum
+  - while using GD the params should be in similar scale - use StandardScaler; or else the convergence will take time
+  - more number of features means more dimensions - and more dimensions take long time to converge
+  - to implement it we need to calculate partial derivative w.r.t. each model parameter
+  - in batch gradient decent the whole training set is used to calculate this derivative
+  - it scales well with number of params; so it is faster than normal equation or SVD for hundreds of thousands of features
+  - start with a bigger learning rate and decrease it later
+  - when the cost function is convex without abrupt change in slopes then GD converges to global minima; 
+    - it can take O(1/epsilon) iterations for minima within an error of epsilon; if we reduce the tolerance to have 10 times more precision then GD will have to run for 10 times more number of iterations
+  - Stochastic GD: 
+    - use 1 instance instead of the whole training set batch
+    - it is faster and will reach a good enough solution but not optimal
+    - it helps when the cost function is irregular because it will jump out of the local minima and the chances of finding the global minima increases
+    - SGDRegressor in sklearn
+  - mini-batch GD:
+    - computes gradients on small mini-batches
+    - we can performance optimization here compared to Stochastic GD if using GPU
+    - more stable than stochastic GD but this one might find it harder to escape local minima
+  -                     large_m   large_n (m is number of instances and n is number of features)
+     normal equation    fast      slow
+     SVD                fast      slow
+     batch GD           slow      fast
+     stochastic GD      fast      fast
+     mini-batch GD      fast      fast
+  - practically these models perform similarly after training
+- Polynomial Regression:
+  - when our data is more complex than a straight line
+  - in polynomial regression, we include new features which are the powers of existing features; and then we train a linear model on top of these new extended set of features
+  - polynomial regression can find the relationship between features because it also combines features. for example, if there are 2 features a and b then polynomial regression will not only add a^2, a^3, b^2, b^3, but it will also add a^2.b, a.b^2, a.b
+  - there would be a combinatorial explosion of features
+  - how to find out the complexity of the model (i.e. what polynomial degree to use)?
+    - if model performing well on training data but not on test data as per cross-validation metrics then it is overfitting; if it performs badly on both then it is underfitting
+    - learning curves:
+      - plot model's performance on training and validation set as a function of the training size (or iteration)
+      - train the model several times on different batch sizes
+      - in the beginning with 1 or 2 instances training error is less and validation error is high 
+        - this is because in the beginning the model can remember just the 1 or 2 examples but since the function is not learnt properly, so validation error is high
+      - on adding more instances, training error increases (due to addition of noise and if the model is not complex enough to learn the data) and validation error decreases (function is being learnt)
+      - at some point both of them pleatues
+      - these learning curves are typical of when a model is underfitting because learning has stopped with increasing number of instances - hence the pleatues
+        - if model is underfitting adding more training data won't help - we need a complex model
+      - if we use a complex enough model we will see:
+        - error on training data to be much lesser than the simpler model
+        - there would be a gap between training and validation error -> overfit -> feed more data until the training and validation error are very close
+- Regularized Linear Models:
+  - to reduce overfitting by making the models have fewer degrees of freedom so that it does not overfit the data.  Ex:
+    - for a polynomial model by reducing the polynomial degrees
+    - for a linear model by constraining the weights of the model
+  - we typically scale data before regularizing as it is sensitive to the scale of the input
+  - techniques:
+    - ridge regression: 
+      - aka tikhonov regularization
+      - add a regularization term (alpha.(theta-1^2 + .. + theta-n^2)) to the cost function to keep model weights low while fitting
+      - final cost function = MSE + (alpha.(theta-1^2 + .. + theta-n^2))
+      - it is only added during training, not during evaluation of the model's performance
+      - hyperparam alpha dictates how much we want to regularize; alpha=0 means no regularization and alpha=high-value means all weights will be close to 0
+      - as with linear regression we can perform ridge regression either with closed-form equation or using Gradient Descent.  The pros and cons are the same
+    - lasso regularization:
+      - adds the l1 norm: MSE + (alpha.(theta-1 + .. + theta-n))
+      - it tends to eliminate the weights of the least important features i.e. also helps with feature selection
+    - elastic net:
+      - regularization term is a mix of ridge and lasso and we can control the mix using a param r
+      - MSE + r.(alpha.(theta-1 + .. + theta-n)) + ((1-r)/2).(alpha.(theta-1^2 + .. + theta-n^2))
+        - r=0 => ridge and r=1 => lasso
+    - early stopping:
+      - for gradient descent
+      - stop when validation error is minimum
+      - for stochastic and mini-batch gradient descent it might be hard to find when validation error is minimum; so stop after validation error has been above the minimum for sometime and use the value when validation error was minimum
+  - when to use what?
+    - regularization is preferred over simple LinearRegression
+    - ridge is a good default
+    - if we suspect that only some features are useful then use lasso or elastic net
+      - elastic net is preferred because lasso may behave erratically when the number of features > number of instances or when several features are correlated
+- Logistic Regression:
+  - can be used for classification; if estimated probability > 50% then model predicts that class else not (binary classification)
+  - like linear regression it computes a weighted sum of input features + a bias, but instead of outputting the result directly like linear regression it outputs the logistic of the result
+    - the logistic function is the sigmoid function which returns a value between 0 and 1
+    - sigma(t) = 1/(1+e^-t
+    - if this values is >0.5 then positive class, else negative class
+    - t is called the logit
+  - no closed-form equation to find the minimum theta for the cost function, but the cost function is convex so we can use gradient descent to find the global minima
+- Softmax Regression (or multinomial regression):
+  - Logistic regression can be generalized to support multi class 
+  - it computes a score for each class, and then estimate the probability of each class using the softmax function
+  - it then predicts the class with the highest probability value
+  - it outputs only one value - it is not multioutput
+  - use it only with mutually exclusive classes
+  - training:
+    - objective: achieve high probability for target class by minimizing the cost function cross-entropy
+    - now use gradient decent to find min value
+
+
+## Support Vector Machines (SVM)
+- 
 
 ## Miscellaneous
 - Handling null values:
   - many traditional ML algos in sklearn like Logistic Regression, Linear Regression, kNN, K-means, SVM, etc. cannot handle null values
   - some algorithms like XGBoost, HistGradientBoosting, etc. can handle null values
+- Bias/Variance Tradeoff:
+  - a model's generalization error can be expressed as the sum of:
+    - bias: 
+      - this error is due to wrong assumption like assuming data is linear when it is quadratic
+      - a high-bias model is likely to underfit 
+      - solution: increase model complexity
+    - variance:
+      - this error is due to model's excessive sensitivity to small variations in training data
+      - a model with many degrees of freedom is likely to have high variance and overfit
+      - solution: gather more data
+    - irreducible error:
+      - error due to noise in data
+      - solution: fix the data source itself like remove noise/outliers/fix-broken-sensors etc.

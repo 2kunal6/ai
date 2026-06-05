@@ -3,6 +3,13 @@
 - inplace:
   - by default pandas dataframes are not inplace
   - df.dropna(inplace=True) is discouraged compared to df = df.dropna() because the latter supports chaining better
+- axis:
+  - sum:
+    - df.sum(axis=0): for each column we have a sum which is the sum for all rows in that column
+    - df.sum(axis=1): for each row we have a sum which is the sum for all columns in that row
+  - drop:
+    - axis=0: drop a row
+    - axis=1: drop a column
 
 ## scikit-learn
 - all objects in scikit-learn's API share a consistent interface
@@ -26,3 +33,4 @@
   - datasets are represented either as numpy arrays or scipy sparse matrices 
   - uses sensible defaults
   - composition: ex. it's easy to create a pipeline by combining transformers
+- cross_val_predict() vs cross_val_score()
