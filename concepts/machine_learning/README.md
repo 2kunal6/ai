@@ -613,7 +613,75 @@
 
 
 ## Unsupervised Learning Techniques
-- 
+- Today most of the investments is on supervised learning but there are a lot of unlabled data, hence there's a lot of potential for unsupervised learning
+- Types:
+  - dimensionality reduction
+  - clustering:
+    - assigning instances to groups that are similar; no universal definition of what a cluster is - depends on the task at hand
+    - uses: 
+      - customer segmentation for recommender systems
+      - dimensionality reduction: for k clusters a k-dimensional vector is used 
+      - anomaly detection: items outside of all clusters are likely to be anomalies - used in fraud detection
+      - semi-supervised learning: use labels of a cluster for other instances in that cluster
+      - search engines: ex. images similar to a query images are the images in a cluster
+      - image segmentation: cluster pixels of different image segments like human, dog etc.
+      - data preprocessing: replace image with distances to their cluster centroids and do classification for example
+    - k-means:
+      - advantages: fast and scalable
+      - drawback:
+        - needs many runs to avoid suboptimal solutions
+        - finding the number of clusters ourselves
+        - does not work well when the clusters have different diameters, sizes, densities etc.
+      - soft clustering: give a score for each (instance, cluster) pair
+      - steps: choose centroids, assign points, compute new centroid, continue until the centroid stops moving
+        - the algo is guaranteed to converge in a few steps
+      - complexity: O(m * n * k)
+      - the algo can choose a suboptimum solution
+      - which centroid to choose? use random initializations and choose the best one
+      - the metric to decide which clustering is based is called inertia - mean squared error of each instance to it's closest centroid
+      - variants:
+        - k-means++: to choose initial centroids smartly which are far apart
+        - Accelerated K-means: avoid unnecessary distance computations by utilizing the triangle inequality property
+        - mini-batch k-means: use mini-batches to move the centroids slightly
+      - finding optimal number of clusters:
+        - inertia is a bad metric here because for higher value of k more instances will be closer to the centroid
+        - silhouette score: 
+      - it's important to scale the data before running k-means otherwise it will perform badly
+    - DBSCAN:
+      - clusters continuous regions of high density
+      - an instance with min_samples instances within it's epsilon distance is considered a core instance - all instances within a core instance's epsilon distance belongs to the same cluster; there could be many core instances in the same cluster
+        - instances not within the epsilon distance of the core instance are considered outliers
+      - this algo works well when there are high-density regions separated by low density regions
+      - advantages:
+        - automatically identifies number of clusters
+      - drawback: if density varies then it can't find the appropriate clusters
+    - Agglomerative Clustering:
+      - starts with each instance as a cluster and merges nearest clusters until a threshold number of clusters is obtained
+    - BIRCH:
+      - works for huge datasets when number of features is less
+      - it builds a tree to quickly assign an instance to a cluster without storing all instances in the tree
+    - mean shift:
+      - creates a circle around an instance and computes a mean around all points in the circle and moves the circle according to the mean until the circle stops moving
+    - affinity propagation:
+      - takes votes of points for the instance representative
+    - spectral clustering: finds cluster in a low-dimensional space
+  - anomaly detection:
+    - Gaussian Mixture Models(GMM):
+      - assumes all instances were generated from a mixture of several gaussian distributions
+      - can be used for anomaly/novelty detection
+    - PCA
+    - Isolation Forest:
+      - outliers get isolated across all DTs
+    - Local Outlier Factor:
+      - compares density of a point to the density around it's neighbours
+    - One-class SVM:
+      - 
+  - density estimation:
+    - estimating the probability density function (PDF) that generated a dataset
+    - used for anomaly detection i.e. instances in the area of low density are likely to be outliers
+
+
+
 
 ## Miscellaneous
 - Handling null values:
@@ -632,3 +700,4 @@
     - irreducible error:
       - error due to noise in data
       - solution: fix the data source itself like remove noise/outliers/fix-broken-sensors etc.
+- Active Learning: use model to label unlabeled data and use human scorer when confidence of model is low
