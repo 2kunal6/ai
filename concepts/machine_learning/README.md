@@ -468,6 +468,153 @@
   - using Gradient Descent (SGDClassifier) but it converges slowly 
   - using kernelized SVMs
 
+
+## Decision Trees
+- Like SVM, DTs are versatile and can perform regression, classification, and multioutput tasks
+- DTs are fundamental components of Random Forests
+- a node contains following info:
+  - how many samples it applies to
+  - which classes does these samples belong to
+  - gini: to measure entropy; gini=0 means all samples belong to the same class
+    - entropy can also be used 
+    - gini is a bit faster but in some cases entropy can make the DTs more balanced
+- we can specify max_depth
+- the decision boundary is rectangles for 2d data for example
+- advantages:
+  - requires less data preparation - no scaling or centering
+  - white-box models; good for explainability as to what factors were taken into consideration for the decision
+  - we can vizualize the DT using scikit's export_graphviz
+- Estimating class probabilities:
+  - go to the leaf node and the class probability is the number of instances of a particular class compared to the total number of instances in that leaf node
+- sklearn uses CART algorithm for DT which produces binary tree only; ID3 is another algo that produces non-binary tree too 
+  - CART:
+    - Classification and Regression Tree
+    - splits the training set into 2 subsets based on a single feature k and threshold tk
+    - (k, tk) pair is chosen which gives the purest subsets
+    - it recursively does this until max-depth reached or no split possible or based on other hyperparams like min/max samples left in node etc.
+    - it's greedy in nature and not guaranteed to reach optimal solution
+    - finding an optimal solution is NP-complete requiring exponential computation, so we settle for a good enough solution
+- Computational Complexity:
+  - inference: DTs are approximately balanced - so O(log(m))
+  - training: training algo compares all features (or max features) on all samples at each node - O(n * m log(m))
+    - for small training sizes (< few thousand) sklearn can presort=True to speed up, but presorting will slow down training for large training sets
+- Regularization HyperParameters:
+  - DTs make less assumptions of the data, unlike linear models which assumes that the data is linear.  therefore there's a high chance of overfitting since it does not try to fit the data in the assumed complexity
+    - such models are called non-parametric models, not because it does not have params but that the number of params are not defined before training - so the model is free to stick to the structure of the data
+    - in contrast a parametric model like linear models has a predetermined number of parameters, so the number of degrees of freedom is limited - reducing the chance of overfitting but increasing the chance of underfitting
+  - DT regularization is done during training, for example by restricting the tree depth, min_samples_split (min number of samples needed in a node for split), min_samples_leaf (min samples required in a leaf)
+  - Other algos work by growing the full DT and pruning it later
+  - a node is not split if purity improvement is not significant
+- Regression:
+  - DecisionTreeRegressor()
+  - target is the average of all samples in the leaf node
+  - CART algo here splits data to reduce MSE
+- Disadvantages:
+  - creates orthogonal decision boundaries which is bad if the training data is rotated
+    - use PCA to better orient the rotation of the data
+  - sensitive to small variations in the training data
+  - use random_state to get same DT each time
+
+
+## Ensemble Learning and Random Forests
+- wisdom of the croud
+- assumption is that the prediction of an ensemble of models will be better than individual ones
+  - even with weak learners, ensemble methods work well if the errors are diverse
+  - this is due to the law of large numbers - with increasing number the probability gets closer to the true probability
+- Voting Classifiers:
+  - hard-voting classifier: majority vote wins; average in case of regression
+  - soft-voting: works better in practice than hard-voting
+  - based on probability averaged
+- ensemble techniques:
+  - choose different training algos
+  - bagging and pasting:
+    - use same algo but on different random subsets
+    - when sampling is performed with replacement it's called bagging; and without replacement it's called pasting
+    - they scale well because predictors can be trained paralelly
+    - sklearn BaggingClassifier, BaggingRegressor, with boostrap=True/False for replacement or not
+    - out-of-bag evaluation (oob):
+      - in bagging the samples that are not chosen for training for a predictor are called out-of-bag and they can be used for evaluation
+      - these oob samples will be different for different predictors
+    - random patches and random subspaces:
+      - used for feature sampling to use a subset of features in each predictor of the ensemble
+      - this is useful with high-dimensional data like images
+      - sampling both training instances and features is called random patches and sampling only features is called random subspaces
+      - sampling features makes the model more diverse
+    - boosting (hypothesis boosting):
+      - train predictors sequentially, each trying to correct it's predecessor
+      - adaboost: 
+        - pay more attention to failed training instances by increasing their weights
+      - gradient boost:
+        - instead of tweaking weights like adaboost, it adds a new predictor for the failed training instances
+        - XGBoost
+      - stacking:
+        - stacked generalization
+        - train a meta model to learn to predict based on the inputs from the ensemble models
+      - drawback: can't be parallelized
+- RandomForest: 
+  - ensemble of DTs, generally trained via bagging
+  - one of the most powerful ML algos
+  - RandomForestClassifier()
+  - it introduces more randomness by choosing the best feature among a set of features
+  - Extremely randomized trees: random set of features + random threshold value at each node
+  - random forests help with selecting the best features
+
+
+## Dimensionality Reduction
+- advantages:
+  - makes training fast
+  - higher dimension makes it harder to find a good solution  
+  - it also helps with vizualization by reducing the dimensions so that it can be plotted - for example to vizualize clusters
+  - data compression
+- curse of dimensionality:
+  - in higher dimensions things get tricky
+    - ex. for 1x1 square there's a little chance that a point will lie in border but for a dimension of 10000 there's >99% chance that a point will lie close to border - most points in that dimension is close to the border
+    - ex2. distance between 2 points in a 10^6 hyperdimension unit-cube is ~408 (compared to 0.5 in 2 dim)
+  - in high dimensions since points are very far it is difficult to predict because there is no neighbour to compare - a lot of extrapolation required
+  - number of training instances required for a dimension to train sufficiently is exponential - 100 dimensions (< MNIST) will require number of training instances more than the number of atoms in the observable universe
+- Approaches for dimensionality reduction:
+  - Projection:
+    - in most-real world problems, training instances lie quite closer in a subspace of a lower dimension; so we can map the instances in this lower dimension
+      - it does not work for when the instances are in the form of a swiss roll because different layers of the swiss roll will be squashed together or overwritten
+  - Manifold Learning:
+    - swiss roll is an example of 2D manifold
+    - manifold learning works by modeling the manifold in which the training instances lie
+- Techniques:
+  - PCA: (most popular)
+    - Principal Component Analysis
+    - first it identifies the hyperplane that is closest to the data and then projects the data onto it
+    - the best hyperplane is the one that preserves the maximum variance, because that is likely to preserve more info
+    - so PCA identifies the axis that has max variance calculated by mean squared distance
+    - in higher dimensions we will have to choose many axis - the ith axis is the ith principal component
+    - SVD is used to find it
+    - PCA assumes data to be centred which scikit does automatically for us
+    - at last we can project the higher dimensional data points to these principal component axes
+    - choosing the number of dimensions:
+      - choose the dimension which preserves let's say 95% variance
+      - for viz we need to project to 2 or 3 dimensions
+    - randomized PCA: quickly estimate d principal components
+    - Incremental PCA: unlike normal PCA it does not require to fit the entire data in memory
+      - it also helps with applying PCA online
+    - Kernel PCA:
+      - using RBF kernel for example
+    - tuning params: 
+      - as it is unsupervised, there's no measure to find the best params, but we can use the dimension reduced data to perform the actual task of classif/regression etc. and choose the params that works best for those target tasks
+  - LLE: 
+    - Locally Linear Embedding
+    - it uses manifold learning unlike PCA
+    - it first measures how an instance linearly relates to it's closest neighbours, and look for a lower-dimension where these linear relationships are best preserved in the training set
+  - Random Projections:
+    - projects to a low-dimensional space using random linear projections
+    - a lemma suggests that based on the number of instances and the target dimension, some estimate can be made on distance preservation between points
+  - Isomap: works on the principle of distance preservation by connecting neighbours in a graph
+  - LDA:
+    - Linear Discriminant Analysis
+    - it's a classification algo, but during training it learns the most discriminant axes between the classes and these discriminants are used to construct the hyperplane on which to project the data
+
+
+## Unsupervised Learning Techniques
+- 
+
 ## Miscellaneous
 - Handling null values:
   - many traditional ML algos in sklearn like Logistic Regression, Linear Regression, kNN, K-means, SVM, etc. cannot handle null values
