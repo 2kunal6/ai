@@ -77,7 +77,7 @@ def evaluate(y_test, y_pred):
     print(classification_report(y_test, y_pred))
 
 def main():
-    df = pd.read_csv("resources/llm_hallucination_dataset_v1.csv")
+    df = pd.read_csv("../resources/llm_hallucination_dataset_v1.csv")
     get_basic_info(df)
     df = handle_null_values(df)
     X, y = extract_label_column(df, 'hallucination_label')

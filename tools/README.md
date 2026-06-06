@@ -36,3 +36,8 @@
   - composition: ex. it's easy to create a pipeline by combining transformers
 - cross_val_predict() vs cross_val_score()
 - StandardScaler
+- pipeline(uses imputer for example) vs pandas data cleaning:
+  - pipeline is generally preferred for ML tasks; use pandas data cleaning to analyze the data only
+  - pipeline is for ML preprocessing while pandas is for general data cleaning
+  - pipeline prevents train-test leakage while pandas data cleaning does not
+  - for future predictions, pipeline works automatically while pandas does not
