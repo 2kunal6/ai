@@ -40,9 +40,7 @@ def evaluate(y_test, y_pred):
     print(classification_report(y_test, y_pred))
 
 def main():
-    train_df = pd.read_csv("../resources/spaceship-titanic/train.csv")
-    test_df = pd.read_csv("../resources/spaceship-titanic/test.csv")
-    df = pd.concat([train_df, test_df])
+    df = pd.read_csv("../resources/spaceship-titanic/train.csv")
 
     df = drop_columns(df)
     preprocessor = get_column_transformers()
@@ -51,12 +49,13 @@ def main():
 
     model_pipeline = get_model_pipeline(preprocessor)
     model_pipeline.fit(X_train, y_train)
-    #print(type(X_test))
-    #print(y_test.iloc[0])
-    #print(model_pipeline.predict(X_test.iloc[0:1]))
+    print(type(X_test))
+    print(y_test[1])
+    print(model_pipeline.predict(X_test.iloc[1:2]))
     # using pipeline to predict automatically applies the same transformations to X_test; hence, no need to do transform X_test separately
     y_pred = model_pipeline.predict(X_test)
-
+    comparison_df = pd.DataFrame({"Actual": y_test, "Predicted": y_pred})
+    print(comparison_df.head(20))
     evaluate(y_test, y_pred)
 
 
