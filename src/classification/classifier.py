@@ -55,10 +55,10 @@ def get_model_pipeline(preprocessor):
         #('classifier', SVC(kernel='rbf')),
         #('classifier', LinearSVC()),
         #('classifier', DecisionTreeClassifier())
-        ('classifier', RandomForestClassifier())
+        #('classifier', RandomForestClassifier())
         #('classifier', ExtraTreesClassifier())
         #('classifier', GradientBoostingClassifier())
-        #('classifier', XGBClassifier())
+        ('classifier', XGBClassifier())
         #('classifier', GaussianNB())
         #('classifier', KNeighborsClassifier())
         #('classifier', MLPClassifier())
