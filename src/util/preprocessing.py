@@ -21,7 +21,8 @@ def get_column_transformers(PREPROCESSING_CONFIG):
     transformers = []
     for column, config in PREPROCESSING_CONFIG.items():
         steps = []
-        steps.append(("imputer", get_imputer(config["imputer"])))
+        if ("imputer" in config):
+            steps.append(("imputer", get_imputer(config["imputer"])))
         if("encoder" in config):
             steps.append(("encoder", get_encoder(config.get("encoder"))))
         if("scale" in config):
