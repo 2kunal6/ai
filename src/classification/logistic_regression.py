@@ -1,12 +1,11 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder, LabelEncoder
+from sklearn.preprocessing import LabelEncoder
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report
-from sklearn.impute import SimpleImputer
-from sklearn.pipeline import make_pipeline
+
+from logistic_regression_preprocessing import get_column_transformers
 
 
 #########################################################
@@ -24,47 +23,6 @@ def drop_columns(df):
     drop_columns_list = ['Name', 'Age', 'Cabin', 'CryoSleep']
     df = df.drop(columns=drop_columns_list)
     return df
-
-def handle_null_values(df):
-    column_configs = {'HomePlanet': ("constant", "onehot", "missing"),
-                      'Destination': ("constant", "onehot", "missing"),
-                      # because most of the entries are non-VIP and it's unlikely that a VIP entry will have wrong entry
-                      'VIP': ("most_frequent", "ordinal"),
-                      # maybe the user did not spend anything on these services and thus those values are 0
-                      'RoomService': ("constant", "none", 0),
-                      'FoodCourt': ("constant", "none", 0),
-                      'ShoppingMall': ("constant", "none", 0),
-                      'Spa': ("constant", "none", 0),
-                      'VRDeck': ("constant", "none", 0),
-                      }
-
-    transformers = []
-
-    for col_name, config in column_configs.items():
-        strategy = config[0]
-        encoder_type = config[1]
-
-        if strategy == "constant":
-            fill_val = config[2]
-            imputer = SimpleImputer(strategy="constant", fill_value=fill_val)
-        elif strategy in ["mean", "median", "most_frequent"]:
-            imputer = SimpleImputer(strategy=strategy)
-
-        if encoder_type == "onehot":
-            encoder = OneHotEncoder(handle_unknown="ignore", sparse_output=False)
-        elif encoder_type == "ordinal":
-            encoder = OrdinalEncoder(handle_unknown="use_encoded_value", unknown_value=-1)
-        else:
-            encoder = "passthrough"
-
-        pipeline_steps = [imputer, encoder] if encoder != "passthrough" else [imputer]
-
-        transformers.append(
-            (f"{col_name}_{strategy}_{encoder_type}", make_pipeline(*pipeline_steps), [col_name])
-        )
-
-    preprocessor = ColumnTransformer(transformers=transformers, remainder="passthrough")
-    return preprocessor
 
 def extract_label_column(df, label_column_name):
     y = LabelEncoder().fit_transform(df[label_column_name])
@@ -87,7 +45,7 @@ def main():
     df = pd.concat([train_df, test_df])
 
     df = drop_columns(df)
-    preprocessor = handle_null_values(df)
+    preprocessor = get_column_transformers()
     X, y = extract_label_column(df, 'Transported')
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
