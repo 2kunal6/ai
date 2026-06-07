@@ -4,10 +4,9 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import LabelEncoder
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report
-from sklearn.model_selection import GridSearchCV
 from sklearn.feature_selection import SelectKBest
 
-from preprocessing import get_column_transformers
+from util.preprocessing import get_column_transformers
 
 
 #########################################################
@@ -26,6 +25,21 @@ def drop_columns(df):
     df = df.drop(columns=drop_columns_list)
     return df
 
+PREPROCESSING_CONFIG = {
+    # ---------- CATEGORICAL ----------
+    "HomePlanet": {"imputer": {"constant": "missing"}, "encoder": "onehot"},
+    "Destination": {"imputer": {"constant": "missing"}, "encoder": "onehot"},
+    # because most of the entries are non-VIP and it's unlikely that a VIP entry will have wrong entry
+    "VIP": {"imputer": {"inbuilt": "most_frequent"}, "encoder": "ordinal", "bool": True},
+    # ---------- NUMERIC ----------
+    # maybe the user did not spend anything on these services and thus those values are 0
+    "RoomService": {"imputer": {"constant": 0}, "scale": True},
+    "FoodCourt": {"imputer": {"constant": 0}, "scale": True},
+    "ShoppingMall": {"imputer": {"constant": 0}, "scale": True},
+    "Spa": {"imputer": {"constant": 0}, "scale": True},
+    "VRDeck": {"imputer": {"constant": 0}, "scale": True}
+}
+
 def extract_label_column(df, label_column_name):
     y = LabelEncoder().fit_transform(df[label_column_name])
     X = df.drop(columns=[label_column_name])
@@ -43,11 +57,11 @@ def evaluate(y_test, y_pred):
     print(classification_report(y_test, y_pred))
 
 def main():
-    df = pd.read_csv("../resources/spaceship-titanic/train.csv")
-    test_df = pd.read_csv("../resources/spaceship-titanic/test.csv")
+    df = pd.read_csv("resources/spaceship-titanic/train.csv")
+    test_df = pd.read_csv("resources/spaceship-titanic/test.csv")
 
     df = drop_columns(df)
-    preprocessor = get_column_transformers()
+    preprocessor = get_column_transformers(PREPROCESSING_CONFIG)
     X, y = extract_label_column(df, 'Transported')
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 

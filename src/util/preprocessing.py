@@ -4,21 +4,6 @@ from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder, StandardScaler
 from sklearn.pipeline import Pipeline
 
 
-PREPROCESSING_CONFIG = {
-    # ---------- CATEGORICAL ----------
-    "HomePlanet": {"imputer": {"constant": "missing"}, "encoder": "onehot"},
-    "Destination": {"imputer": {"constant": "missing"}, "encoder": "onehot"},
-    # because most of the entries are non-VIP and it's unlikely that a VIP entry will have wrong entry
-    "VIP": {"imputer": {"inbuilt": "most_frequent"}, "encoder": "ordinal", "bool": True},
-    # ---------- NUMERIC ----------
-    # maybe the user did not spend anything on these services and thus those values are 0
-    "RoomService": {"imputer": {"constant": 0}, "scale": True},
-    "FoodCourt": {"imputer": {"constant": 0}, "scale": True},
-    "ShoppingMall": {"imputer": {"constant": 0}, "scale": True},
-    "Spa": {"imputer": {"constant": 0}, "scale": True},
-    "VRDeck": {"imputer": {"constant": 0}, "scale": True}
-}
-
 def get_imputer(strategy):
     if "inbuilt" in strategy:
         return SimpleImputer(strategy=strategy["inbuilt"])
@@ -32,7 +17,7 @@ def get_encoder(strategy):
             return OrdinalEncoder(categories = [[False, True]], handle_unknown="use_encoded_value", unknown_value=-1)
         return OrdinalEncoder(handle_unknown="use_encoded_value", unknown_value=-1)
 
-def get_column_transformers():
+def get_column_transformers(PREPROCESSING_CONFIG):
     transformers = []
     for column, config in PREPROCESSING_CONFIG.items():
         steps = []
