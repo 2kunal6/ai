@@ -7,7 +7,7 @@ from sklearn.metrics import accuracy_score, classification_report
 from sklearn.model_selection import GridSearchCV
 from sklearn.feature_selection import SelectKBest
 
-from logistic_regression_preprocessing import get_column_transformers
+from preprocessing import get_column_transformers
 
 
 #########################################################
