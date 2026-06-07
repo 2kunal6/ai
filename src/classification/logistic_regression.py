@@ -4,6 +4,8 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import LabelEncoder
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report
+from sklearn.model_selection import GridSearchCV
+from sklearn.feature_selection import SelectKBest
 
 from logistic_regression_preprocessing import get_column_transformers
 
@@ -32,6 +34,7 @@ def extract_label_column(df, label_column_name):
 def get_model_pipeline(preprocessor):
     return Pipeline([
         ("preprocessor", preprocessor),
+        ('feature_selection', SelectKBest(k=100)),
         ("classifier", LogisticRegression(random_state=42))
     ])
 
@@ -62,6 +65,26 @@ def main():
     test_ids = test_df["PassengerId"]
     test_df = drop_columns(test_df)
     y_pred_submission = model_pipeline.predict(test_df)
+    y_pred_submission = y_pred_submission.astype(bool)
+
+    '''
+    param_grid = {
+        'classifier__C': [0.001, 0.01, 0.1, 1, 10, 100]
+    }
+
+    grid = GridSearchCV(
+        estimator=model_pipeline,
+        param_grid=param_grid,
+        cv=5,
+        scoring='f1',  # or 'accuracy', 'roc_auc'
+        n_jobs=-1
+    )
+
+    grid.fit(X_train, y_train)
+    best_pipeline = grid.best_estimator_
+
+    y_pred = best_pipeline.predict(test_df)
+    '''
     y_pred_submission = y_pred_submission.astype(bool)
     submission = pd.DataFrame({
         "PassengerId": test_ids,
