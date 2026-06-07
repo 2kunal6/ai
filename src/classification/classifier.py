@@ -55,13 +55,13 @@ def get_model_pipeline(preprocessor):
         #('classifier', SVC(kernel='rbf')),
         #('classifier', LinearSVC()),
         #('classifier', DecisionTreeClassifier())
-        #('classifier', RandomForestClassifier())
+        ('classifier', RandomForestClassifier())
         #('classifier', ExtraTreesClassifier())
         #('classifier', GradientBoostingClassifier())
         #('classifier', XGBClassifier())
         #('classifier', GaussianNB())
         #('classifier', KNeighborsClassifier())
-        ('classifier', MLPClassifier())
+        #('classifier', MLPClassifier())
         #('feature_selection', SelectKBest(k=100)),
         #('classifier', LogisticRegression(random_state=42))
     ])
@@ -106,7 +106,6 @@ def main():
     test_df = drop_columns(test_df)
     y_pred_submission = model_pipeline.predict(test_df)
     y_pred_submission = label_encoder.inverse_transform(y_pred_submission)
-    #y_pred_submission = y_pred_submission.astype(bool)
 
     '''param_grid = {
         'classifier__C': [0.001, 0.01, 0.1, 1, 10, 100]

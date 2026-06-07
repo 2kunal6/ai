@@ -31,4 +31,4 @@ def get_column_transformers(PREPROCESSING_CONFIG):
 
         transformers.append((column, Pipeline(steps), [column]))
 
-    return ColumnTransformer(transformers=transformers, remainder="drop")
+    return ColumnTransformer(transformers=transformers, remainder="passthrough")
