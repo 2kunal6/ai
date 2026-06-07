@@ -32,7 +32,8 @@ def drop_columns(df):
         - if we use min/max/median then the data becomes skewed with higher frequency count for the min/max/median age
         - also there's no pattern of age to the target column - each age has balanced distributed target column True/False
     '''
-    drop_columns_list = ['id', 'g', 'r', 'i']
+    #drop_columns_list = ['id', 'g', 'r', 'i']
+    drop_columns_list = ['id']
     df = df.drop(columns=drop_columns_list)
     return df
 
@@ -45,6 +46,9 @@ PREPROCESSING_CONFIG = {
     "delta": {"scale": True},
     "u": {"scale": True},
     "z": {"scale": True},
+    "g": {"scale": True},
+    "r": {"scale": True},
+    "i": {"scale": True},
     "redshift": {"scale": True}
 }
 
