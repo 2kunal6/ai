@@ -701,3 +701,7 @@
       - error due to noise in data
       - solution: fix the data source itself like remove noise/outliers/fix-broken-sensors etc.
 - Active Learning: use model to label unlabeled data and use human scorer when confidence of model is low
+- Classification:
+  - binary:
+    - SVM (both Linear and RBF) and LogisticRegression are sensitive to scale; so we need to use StandardScaler() to scale the columns appropriately in preprocessing
+    - The main difference between LinearSVC and SVC(kernel='linear') in scikit-learn is their underlying library implementation, which directly impacts training speed, scalability, and default mathematical parameters. LinearSVC is built on top of liblinear, making it highly optimized for linear classification and vastly faster for large datasets. In contrast, SVC(kernel='linear') is built on libsvm, which handles linear boundaries as a general case of non-linear kernels and scales poorly to large sample sizes

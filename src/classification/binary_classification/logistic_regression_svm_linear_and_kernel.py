@@ -3,9 +3,19 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import LabelEncoder
 from sklearn.linear_model import LogisticRegression
-from sklearn.svm import SVC
+from sklearn.svm import SVC, LinearSVC
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import ExtraTreesClassifier
+from sklearn.ensemble import GradientBoostingClassifier
+from xgboost import XGBClassifier
+from sklearn.naive_bayes import GaussianNB
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.feature_selection import SelectKBest
+
+from sklearn.model_selection import GridSearchCV
 
 from util.preprocessing import get_column_transformers
 
@@ -50,7 +60,16 @@ def get_model_pipeline(preprocessor):
     return Pipeline([
         ("preprocessor", preprocessor),
         #('classifier', SVC(kernel='linear')),
-        ('classifier', SVC(kernel='rbf')),
+        #('classifier', SVC(kernel='rbf')),
+        #('classifier', LinearSVC()),
+        #('classifier', DecisionTreeClassifier())
+        #('classifier', RandomForestClassifier())
+        #('classifier', ExtraTreesClassifier())
+        #('classifier', GradientBoostingClassifier())
+        #('classifier', XGBClassifier())
+        #('classifier', GaussianNB())
+        #('classifier', KNeighborsClassifier())
+        ('classifier', MLPClassifier())
         #('feature_selection', SelectKBest(k=100)),
         #('classifier', LogisticRegression(random_state=42))
     ])
@@ -84,10 +103,17 @@ def main():
     y_pred_submission = model_pipeline.predict(test_df)
     y_pred_submission = y_pred_submission.astype(bool)
 
-    '''
+
     param_grid = {
         'classifier__C': [0.001, 0.01, 0.1, 1, 10, 100]
     }
+    if(str(model_pipeline.steps[1][1]) == 'MLPClassifier()'):
+        param_grid = {
+            'classifier__hidden_layer_sizes': [(50,), (100,), (50, 50)],
+            'classifier__activation': ['relu', 'tanh'],
+            'classifier__alpha': [0.0001, 0.001, 0.01],
+            'classifier__learning_rate_init': [0.001, 0.01]
+        }
 
     grid = GridSearchCV(
         estimator=model_pipeline,
@@ -100,8 +126,8 @@ def main():
     grid.fit(X_train, y_train)
     best_pipeline = grid.best_estimator_
 
-    y_pred = best_pipeline.predict(test_df)
-    '''
+    y_pred_submission = best_pipeline.predict(test_df)
+
     y_pred_submission = y_pred_submission.astype(bool)
     submission = pd.DataFrame({
         "PassengerId": test_ids,
