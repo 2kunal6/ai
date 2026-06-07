@@ -105,9 +105,9 @@ def main():
     test_ids = test_df[submission_id_label]
     test_df = drop_columns(test_df)
     y_pred_submission = model_pipeline.predict(test_df)
-    y_pred_submission = label_encoder.inverse_transform(y_pred_submission)
 
-    '''param_grid = {
+    scoring = 'f1'
+    param_grid = {
         'classifier__C': [0.001, 0.01, 0.1, 1, 10, 100]
     }
     if(str(model_pipeline.steps[1][1]) == 'MLPClassifier()'):
@@ -117,20 +117,30 @@ def main():
             'classifier__alpha': [0.0001, 0.001, 0.01],
             'classifier__learning_rate_init': [0.001, 0.01]
         }
+    if(str(model_pipeline.steps[1][1]) == 'XGBClassifier()'):
+        param_grid = {
+            'classifier__max_depth': [3, 4, 5, 6, 8, 10],
+            'classifier__learning_rate': [0.01, 0.03, 0.05, 0.1],
+            'classifier__n_estimators': [200, 500, 1000],
+            'classifier__subsample': [0.6, 0.8, 1.0],
+            'classifier__colsample_bytree': [0.6, 0.8, 1.0]
+        }
+        scoring = 'f1_weighted'
 
     grid = GridSearchCV(
         estimator=model_pipeline,
         param_grid=param_grid,
         cv=5,
-        scoring='f1',  # or 'accuracy', 'roc_auc'
+        scoring=scoring,  # or 'accuracy', 'roc_auc'
         n_jobs=-1
     )
 
     grid.fit(X_train, y_train)
     best_pipeline = grid.best_estimator_
 
-    y_pred_submission = best_pipeline.predict(test_df)'''
+    y_pred_submission = best_pipeline.predict(test_df)
 
+    y_pred_submission = label_encoder.inverse_transform(y_pred_submission)
     submission = pd.DataFrame({
         submission_id_label: test_ids,
         target_label: y_pred_submission
