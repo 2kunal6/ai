@@ -3,6 +3,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import LabelEncoder
 from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.feature_selection import SelectKBest
 
@@ -48,8 +49,10 @@ def extract_label_column(df, label_column_name):
 def get_model_pipeline(preprocessor):
     return Pipeline([
         ("preprocessor", preprocessor),
-        ('feature_selection', SelectKBest(k=100)),
-        ("classifier", LogisticRegression(random_state=42))
+        #('classifier', SVC(kernel='linear')),
+        ('classifier', SVC(kernel='rbf')),
+        #('feature_selection', SelectKBest(k=100)),
+        #('classifier', LogisticRegression(random_state=42))
     ])
 
 def evaluate(y_test, y_pred):
