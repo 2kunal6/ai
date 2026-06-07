@@ -41,6 +41,7 @@ def evaluate(y_test, y_pred):
 
 def main():
     df = pd.read_csv("../resources/spaceship-titanic/train.csv")
+    test_df = pd.read_csv("../resources/spaceship-titanic/test.csv")
 
     df = drop_columns(df)
     preprocessor = get_column_transformers()
@@ -58,6 +59,15 @@ def main():
     print(comparison_df.head(20))
     evaluate(y_test, y_pred)
 
+    test_ids = test_df["PassengerId"]
+    test_df = drop_columns(test_df)
+    y_pred_submission = model_pipeline.predict(test_df)
+    y_pred_submission = y_pred_submission.astype(bool)
+    submission = pd.DataFrame({
+        "PassengerId": test_ids,
+        "Transported": y_pred_submission
+    })
+    submission.to_csv("predictions.csv", index=False)
 
 if __name__ == '__main__':
     main()
