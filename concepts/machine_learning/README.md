@@ -719,3 +719,8 @@
     - The main difference between LinearSVC and SVC(kernel='linear') in scikit-learn is their underlying library implementation, which directly impacts training speed, scalability, and default mathematical parameters. LinearSVC is built on top of liblinear, making it highly optimized for linear classification and vastly faster for large datasets. In contrast, SVC(kernel='linear') is built on libsvm, which handles linear boundaries as a general case of non-linear kernels and scales poorly to large sample sizes
 - Regression:
   - MLPRegressor() is slow - takes a lot of time for 200k rows
+  - CatBoostRegressor(): runs in about 15 seconds for 200k rows with learning rate 0.09
+  - XGBRegressor(): very fast
+  - RandomForestRegressor: takes a lot of time for 200k rows
+  - Ridge: very fast - seconds for 200k rows
+  - SVR: slow for 200k rows

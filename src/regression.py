@@ -3,6 +3,10 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.neural_network import MLPRegressor
 from catboost import CatBoostRegressor
+from xgboost import XGBRegressor
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import Ridge
+from sklearn.svm import SVR
 from sklearn.metrics import mean_squared_error
 import numpy as np
 
@@ -16,7 +20,7 @@ from preprocessing import get_column_transformers
 TRAIN_DATASET = 'resources/playground-series-s4e9/train.csv'
 TEST_DATASET = 'resources/playground-series-s4e9/test.csv'
 TARGET_LABEL = 'price'
-DROP_COLUMNS = ['id', 'fuel_type', 'accident']
+DROP_COLUMNS = ['id']
 PREPROCESSING_CONFIG = {
     # ---------- CATEGORICAL ----------
     "brand": {"encoder": "onehot"},
@@ -26,6 +30,8 @@ PREPROCESSING_CONFIG = {
     "ext_col": {"encoder": "onehot"},
     "int_col": {"encoder": "onehot"},
     "clean_title":  {"imputer": {"constant": "No"}, "encoder": "onehot"},
+    "accident":  {"imputer": {"constant": "missing"}, "encoder": "onehot"},
+    "fuel_type":  {"imputer": {"constant": "Gasoline"}, "encoder": "onehot"},
 }
 #########################################################
 
@@ -40,20 +46,12 @@ pd.set_option('display.max_columns', None)
 def get_model_pipeline(preprocessor):
     return Pipeline([
         ("preprocessor", preprocessor),
-        #('classifier', SVC(kernel='linear')),
-        #('classifier', SVC(kernel='rbf')),
         ('classifier', CatBoostRegressor()),
+        #('classifier', XGBRegressor())
+        #('classifier', RandomForestRegressor())
         #('classifier', MLPRegressor())
-        #('classifier', DecisionTreeClassifier())
-        #('classifier', RandomForestClassifier())
-        #('classifier', ExtraTreesClassifier())
-        #('classifier', GradientBoostingClassifier())
-        #('classifier', XGBClassifier())
-        #('classifier', GaussianNB())
-        #('classifier', KNeighborsClassifier())
-
-        #('feature_selection', SelectKBest(k=100)),
-        #('classifier', LogisticRegression(random_state=42))
+        #('classifier', Ridge())
+        #('classifier', SVR())
     ])
 
 def evaluate(y_test, y_pred):
