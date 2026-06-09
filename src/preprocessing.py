@@ -31,6 +31,10 @@ def get_column_transformers(PREPROCESSING_CONFIG):
         if("scale" in config):
             if config["scale"] == True:
                 steps.append(("scaler", StandardScaler()))
-        transformers.append((column, Pipeline(steps), column))
+
+        if "encoder" in config and config["encoder"] == 'tfidf':
+            transformers.append((column, Pipeline(steps), column))
+        else:
+            transformers.append((column, Pipeline(steps), [column]))
 
     return ColumnTransformer(transformers=transformers, remainder="passthrough")
