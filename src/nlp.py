@@ -3,6 +3,9 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 
 from sklearn.svm import LinearSVC
+from sklearn.linear_model import SGDClassifier
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import classification_report
 
@@ -32,10 +35,10 @@ pd.set_option('display.max_columns', None)
 def get_model_pipeline(preprocessor):
     return Pipeline([
         ("preprocessor", preprocessor),
-        ('classifier', LinearSVC()),
-        #('classifier', XGBRegressor())
-        #('classifier', RandomForestRegressor())
-        #('classifier', MLPRegressor())
+        #('classifier', LinearSVC()),
+        ('classifier', SGDClassifier())
+        #('classifier', MultinomialNB())
+        #('classifier', RandomForestClassifier())
         #('classifier', Ridge())
         #('classifier', SVR())
     ])
