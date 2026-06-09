@@ -1,37 +1,24 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
-from sklearn.neural_network import MLPRegressor
-from catboost import CatBoostRegressor
-from xgboost import XGBRegressor
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.linear_model import Ridge
-from sklearn.svm import SVR
-from sklearn.metrics import mean_squared_error
-import numpy as np
 
+from sklearn.svm import LinearSVC
 from sklearn.model_selection import GridSearchCV
+from sklearn.metrics import classification_report
 
 from preprocessing import get_column_transformers
 
 
 #########################################################
 # config
-TRAIN_DATASET = 'resources/playground-series-s4e9/train.csv'
-TEST_DATASET = 'resources/playground-series-s4e9/test.csv'
-TARGET_LABEL = 'price'
+TRAIN_DATASET = 'resources/nlp-getting-started/train.csv'
+TEST_DATASET = 'resources/nlp-getting-started/test.csv'
+TARGET_LABEL = 'target'
+TEXT_COLUMNS = ['text', 'location', 'keyword']
+COMBINED_TEXT_COLUMN = 'combined_text_column'
 DROP_COLUMNS = ['id']
 PREPROCESSING_CONFIG = {
-    # ---------- CATEGORICAL ----------
-    "brand": {"encoder": "onehot"},
-    "model": {"encoder": "onehot"},
-    "engine": {"encoder": "onehot"},
-    "transmission": {"encoder": "onehot"},
-    "ext_col": {"encoder": "onehot"},
-    "int_col": {"encoder": "onehot"},
-    "clean_title":  {"imputer": {"constant": "No"}, "encoder": "onehot"},
-    "accident":  {"imputer": {"constant": "missing"}, "encoder": "onehot"},
-    "fuel_type":  {"imputer": {"constant": "Gasoline"}, "encoder": "onehot"},
+    COMBINED_TEXT_COLUMN: {"encoder": "tfidf"}
 }
 #########################################################
 
@@ -42,11 +29,10 @@ pd.set_option('display.max_columns', None)
 #########################################################
 
 
-
 def get_model_pipeline(preprocessor):
     return Pipeline([
         ("preprocessor", preprocessor),
-        ('classifier', CatBoostRegressor()),
+        ('classifier', LinearSVC()),
         #('classifier', XGBRegressor())
         #('classifier', RandomForestRegressor())
         #('classifier', MLPRegressor())
@@ -54,15 +40,16 @@ def get_model_pipeline(preprocessor):
         #('classifier', SVR())
     ])
 
-def evaluate(y_test, y_pred):
-    print(np.sqrt(mean_squared_error(y_test, y_pred)))
-
 def main():
     df = pd.read_csv(TRAIN_DATASET)
     test_df = pd.read_csv(TEST_DATASET)
 
+    df[COMBINED_TEXT_COLUMN] = (df[TEXT_COLUMNS].fillna("").agg(" [SEP] ".join, axis=1))
+    df = df.drop(columns=TEXT_COLUMNS)
+
     df = df.drop(columns=DROP_COLUMNS)
     print('columns dropped')
+
     preprocessor = get_column_transformers(PREPROCESSING_CONFIG)
 
     y = df[TARGET_LABEL]
@@ -82,11 +69,14 @@ def main():
     y_pred = model_pipeline.predict(X_test)
     comparison_df = pd.DataFrame({"Actual": y_test, "Predicted": y_pred})
     print(comparison_df.head(10))
-    evaluate(y_test, y_pred)
+    print(classification_report(y_test, y_pred))
 
     submission_id_label = "id"
     test_ids = test_df[submission_id_label]
-    print(test_df.columns)
+
+    test_df[COMBINED_TEXT_COLUMN] = (test_df[TEXT_COLUMNS].fillna("").agg(" [SEP] ".join, axis=1))
+    test_df = test_df.drop(columns=TEXT_COLUMNS)
+
     test_df = test_df.drop(columns=DROP_COLUMNS)
     y_pred_submission = model_pipeline.predict(test_df)
 
