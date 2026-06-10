@@ -3,10 +3,9 @@
 - write logic to guide what to be used
 - classification: sgd 
 - kaggle:
-  - regression
   - AI prompt engineering
   - robot game
-  - NLP
+  - time series
 
 ## Run
 - from inside src run: python classification.py

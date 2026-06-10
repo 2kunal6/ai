@@ -13,18 +13,19 @@ from transformers import (
     TrainingArguments,
     Trainer
 )
-
+from transformers.trainer_utils import get_last_checkpoint
 import numpy as np
 
 #########################################################
 # config
-TRAIN_DATASET = 'nlp-getting-started/train.csv'
-TEST_DATASET = 'nlp-getting-started/test.csv'
-TARGET_LABEL = 'target'
-NUM_LABELS = 2
-TEXT_COLUMNS = ['text', 'location', 'keyword']
+TRAIN_DATASET = 'contradictory-my-dear-watson/train.csv'
+TEST_DATASET = 'contradictory-my-dear-watson/test.csv'
+TARGET_LABEL = 'label'
+# for binary use 2 here
+NUM_LABELS = 3
+TEXT_COLUMNS = ['premise', 'hypothesis', 'language']
 COMBINED_TEXT_COLUMN = 'combined_text_column'
-DROP_COLUMNS = ['id']
+DROP_COLUMNS = ['id', 'lang_abv']
 PREPROCESSING_CONFIG = {
     COMBINED_TEXT_COLUMN: {"encoder": "tfidf"}
 }
@@ -60,7 +61,7 @@ def convert_to_hf_datasets(train_df, test_df):
 
 def tokenize(train_dataset, test_dataset):
     #tokenizer = DistilBertTokenizerFast.from_pretrained("distilbert-base-uncased")
-    tokenizer = BertTokenizerFast.from_pretrained("bert-base-uncased")
+    tokenizer = BertTokenizerFast.from_pretrained(MODEL_NAME)
     def tokenize_function(examples):
         return tokenizer(examples[COMBINED_TEXT_COLUMN], truncation=True, padding="max_length", max_length=256)
 
@@ -80,9 +81,17 @@ def compute_metrics(eval_pred):
 
 def train(train_dataset, test_dataset):
     #model = DistilBertForSequenceClassification.from_pretrained(MODEL_NAME, num_labels=NUM_LABELS)
+    CHECKPOINT_NAME = f"./{MODEL_NAME}_checkpoints"
     model = BertForSequenceClassification.from_pretrained(MODEL_NAME, num_labels=NUM_LABELS)
-    training_args = TrainingArguments(output_dir=f"./{MODEL_NAME}", eval_strategy="epoch", save_strategy="epoch", num_train_epochs=2, per_device_train_batch_size=8, per_device_eval_batch_size=16, weight_decay=0.01, logging_steps=100, load_best_model_at_end=True)
+    training_args = TrainingArguments(output_dir=CHECKPOINT_NAME, eval_strategy="epoch", save_strategy="epoch", num_train_epochs=2, per_device_train_batch_size=8, per_device_eval_batch_size=8, weight_decay=0.01, logging_steps=100, load_best_model_at_end=True)
     trainer = Trainer(model=model, args=training_args, train_dataset=train_dataset, eval_dataset=test_dataset, compute_metrics=compute_metrics)
+
+    checkpoint = get_last_checkpoint(CHECKPOINT_NAME)
+
+    if checkpoint is not None:
+        trainer.train(resume_from_checkpoint=checkpoint)
+    else:
+        trainer.train()
     trainer.train(resume_from_checkpoint=True)
     return trainer
 

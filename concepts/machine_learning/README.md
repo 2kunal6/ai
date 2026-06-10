@@ -724,3 +724,11 @@
   - RandomForestRegressor: takes a lot of time for 200k rows
   - Ridge: very fast - seconds for 200k rows
   - SVR: slow for 200k rows
+- NLP:
+  - first vectorize using TfidfVectorizer
+  - classification:
+    - distilbert or bert: best accuracy
+      - training takes about 4 hours for <15k rows
+    - SGDClassifier
+    - LinearSVC
+    - RandomForestClassifier
