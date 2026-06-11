@@ -305,6 +305,8 @@
     - both the normal equation and SVD slows down when the number of features increases (eg. 100, 000)
     - but both are linear in the number of training examples (O(m)) - so they can handle large training sets efficiently provided they fit in memory
     - predictions are fast - linear in both number of instances and features
+  - Linear Regression can fit curves other than lines.  We need to provide curves of the appropriate shape as features and Linear Regression will combine the features to model this function and fit the target
+    - ex: we can create a new feature x^2 from x if x^2 is polynomial
 - Gradient Descent:
   - way to train a linear regression model when there are a large number of features, or when the training set can't fit in memory
   - generic optimization algo which tweaks params to reduce a cost function by moving in the negative gradient direction
@@ -701,6 +703,134 @@
       - error due to noise in data
       - solution: fix the data source itself like remove noise/outliers/fix-broken-sensors etc.
 - Active Learning: use model to label unlabeled data and use human scorer when confidence of model is low
+
+
+## Time Series
+- In time series data, observations are recorded at regular frequency
+- Components: series = trend + seasons + cycles + errors
+  - the residuals of a model are the difference between predicted and actual values, which the model failed to learn
+  - Learning a time-series is an iterative process: first learn the trend and subtract it out, then learn the seasonality and subtract it out, then learn the cycles and subtract it out, and then whatever remains is the unpredictable error
+  - add together all the components we learned and we get the complete model
+    - y_pred = y_pred_1 + y_pred_2
+  - we normally need one linear model and another non-linear like a Neural Network
+- Features unique to time-series data:
+  - time-step:
+    - features we can directly derive from the time index
+    - ex: time dummy - counts the numbering in increasing order
+    - date           units_sold     time
+    - 2026-06-10        100           0
+    - 2026-06-11        110           1
+    - 2026-06-12        90            2
+    - 2026-06-13        145           3
+    - linear regression with time dummy produces the model: target = weight * time + bias
+      - linear regression then fits to x_axis=time and y_axis=units_sold
+    - a series is time-dependent if it can be predicted from the time they occurred. ex. units_sold are generally higher in the later part of the month than earlier part of the month
+  - lag: 
+    - we shift the observations of the target series so that they appeared to have occurred later in time
+    - date           units_sold     lag_1
+    - 2026-06-10        100           NaN
+    - 2026-06-11        110           100
+    - 2026-06-12        90            110
+    - 2026-06-13        145           90
+    - here we are shifting by 1-step but shifting by multiple steps is also possible
+    - for the missing NaN values, we can drop them or fill with 0 or backfill with the first value
+    - linear regression model with lag: target = weight * lag + bias
+      - lag plot: this curve plots an observation against the previous observation (x_axis = lag_1, y_axis = units_sold)
+      - if there's a correlation in the lag_plot then lag might be useful
+    - lag features help us model serial dependence i.e. when an observation can be predicted from previous ones
+  - Linear Regression is simple to use here but we can use any algo 
+- Applying ML algos to time series is largely about feature engineering with time-step and lag.  The best models usually combine time-step and lag.
+- Trend:
+  - persistent, long-term change in the mean of the time series
+  - slowest moving part of a series
+  - it represents the most important thing like increase in sales due to expansion to different markets
+  - Moving Average Plot: 
+    - to find trend we compute the average of the values in a sliding window of some width
+    - the goal is to remove any short term fluctuations and just to keep the long term trend
+    - for example we can choose a window size of 12 months to smoothen out the seasonal variance in a year
+  - Once we have identified the shape of the trend we can model it using a time-step feature.  We can use linear or if the trend appears polynomial then we can fit a polynomial model by transforming the time dummy
+    - target = a * time^2 + b * time + bias
+    - linear regression will learn the coefficients a, b and c
+- Seasonality:
+  - we say a time series have seasonality when there is a regular and periodic change in the mean of the series
+  - Seasonality changes generally follow clock and the calendar - hour, day, week, year etc.
+  - It is derived by natural world like season or by human behaviour
+  - 2 kinds of features that model seasonality:
+    - Seasonal Plots and Seasonal Indicators:
+      - best for season with few observations like a weekly season of daily observations
+      - seasonal plot: plot observations for a season like all weeks of a year plotted with x-axis=mon-sun and y-axis=sales
+    - seasonal indicators: 
+      - binary features that represent seasonal differences
+      - it's like when we treat the seasonal period as a categorical unit and apply one-hot encoding
+      - ex: Mon - Sun with only 1 weekday set to 1 and others as 0 for each row. this gives us 6 dummy features (Tue - Sun)
+        - Linear regression works best if we drop 1 feature. we dropped monday here
+        - the indicators act as an on/off switch with atmost 1 on.  Linear Regression learns with a baseline of Monday and then On values for the rest of the days 
+        - diagram: https://www.kaggle.com/code/ryanholbrook/seasonality
+    - Fourier Features:
+      - best for season with many observations like yearly season of daily observations
+      - it tries to capture the shape of the overall curve with just a few features
+      - fourier features are pairs of sine and cosine curves, one pair for each potential frequency in the season
+      - fourier pairs modeling annual seasonality will have frequencies 1/2/3... times per year
+      - if we add the sine/cosine curves to our training data, linear regression will figure out the weights that will fit the seasonal components in the target series
+      - periodogram:
+        - to help us find out how many fourier features we need for our data
+        - it tells us the strength of the frequencies 
+- Time Series as Features:
+  - Serial Dependence:
+    - properties that uses past values
+    - these structures are not apparent from a plot over time but by a plot over lag (ex. plot of x=t and y=t-1)
+    - cycles:
+      - one common way of serial dependence to manifest is in cycles
+      - cycles are patterns on growth and decay 
+      - they are behaviours of systems which can affect themselves or whose reactions persist over time
+      - cycles vs seasonality:
+        - cycles are not necessarily dependent on time, as seasons are 
+        - what happens in a cycle is less about the particular date of occurrence, and more about what happened in the recent past
+      - the relative independence of cycles means they are more irregular than seasonality
+    - To investigate serial dependence like cycles we need to add features like lag_1_day, lag_2_days etc. (or lag_1_month, lag_2_months etc).
+      - now we can use lag_1_day, lag_2_days as features to predict target
+      - lag plot: plot of the lag (i.e. current and previous values)
+    - the most common way to measure serial dependence is autocorrelation which is the correlation value of a value to it's past value
+    - choosing lags: use lag values (like lag_1 or lag_3 etc.) if their correlation value is low; low correlation value means it's adding more information - high correlation value means it's not adding much new information
+      - correlogram: plot of correlation for different lag values
+        - correlogram is for lag features what periodogram is for fourier features
+- pure cyclic time-series: that have only cycles not trend or seasonality like flu cases
+- Models:
+  - if time series has all 3 components trend, seasonality and lag then we can use linear regression by adding features for all these 3 values or we can combine models that learn these features separately
+  - Hybrid Models:
+    - Linear Regression is good at extrapolating trends but can't learn interactions between features.  XGBoost can learn interaction between features but can't extrapolate trends. so we can combine them
+  - Hybrid Forecasting with residuals:
+  - 2 ways a regression algorithm predict:
+    - feature transforming: 
+      - predicts based on feature 
+      - generally they can extrapolate values beyond the training set
+    - target transforming:
+      - Models like Decision Trees or Nearest Neighbours or XGBoost or RandomForests which takes average of the values of the group an instance is in
+      - they can't extrapolate trends; it will predict the last value forever
+  - boosted and stacked hybrids
+- steps:
+  - defining the forecasting task:
+    - find features
+    - find time period of target
+    - forecast origin: 
+      - time at which we are making a forecast
+      - it is typically the last available time in the training data; everything upto here can be used to create features
+    - forecast horizon:
+      - time for which we are making a forecast
+    - lead time: time between forecast origin and horizon
+    - figure: https://www.kaggle.com/code/ryanholbrook/forecasting-with-machine-learning
+  - preparing data:
+    - first we need to create the lags; unless we just want trend and seasonality
+    - prepare the target:
+      - each row in a dataframe represents a single forecast; for multistep forecast we output multiple values
+  - multi-step forecasting strategies:
+    - multi-output model: linear regression and NNs can naturally output multiple steps; but XGBoost cannot
+    - Direct Strategy: train different models for different steps like step_1, step_2 etc; but it's computationally expensive
+      - sklearn's MultiOutputRegressor
+    - recursive strategy: train a single one-step model and use it's output for the next step;
+      - but since errors will propagate from step to step so it would be error prone for long chains
+    - direc strategy:
+      - combination of direct and recursive
 
 
 ## Implementation
