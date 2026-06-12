@@ -5,3 +5,4 @@ notebook
 xgboost
 catboost
 seaborn
+statsmodels
