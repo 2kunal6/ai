@@ -41,3 +41,14 @@
   - pipeline is for ML preprocessing while pandas is for general data cleaning
   - pipeline prevents train-test leakage while pandas data cleaning does not
   - for future predictions, pipeline works automatically while pandas does not
+
+## Miscellaneous
+- onnx:
+  - an open standard format to represent ML and Deep Learning models 
+  - benefits: 
+    - helps move models between different frameworks:
+      - normally a model is tied to the framework it was trained on like .pt files for pytorch
+    - run efficiently on different hardware like cpu, nvidia/amd gpu, edge
+    - faster inference:
+      - uses graph optimizations and hardware specific kernels
+    - 
