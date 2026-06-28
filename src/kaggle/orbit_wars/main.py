@@ -65,12 +65,12 @@ def nearest_planet_sniper(obs):
         max_ships_t = None
         for t in targets:
             dist = math.sqrt((mine.x - t.x) ** 2 + (mine.y - t.y) ** 2)
-            if (dist > 10):
+            if (dist > 20):
                 break
             if(t.ships >= mine.ships):
                 continue
-            if(is_rotating(t)):
-                continue
+            #if(is_rotating(t)):
+                #continue
             if(t.ships > max_ships):
                 max_ships_t = t
                 max_ships = t.ships
@@ -95,8 +95,8 @@ def nearest_planet_sniper(obs):
                 moves.append([mine.id, angle, ships_needed])
         else:
             angle = math.atan2(max_ships_t.y - mine.y, max_ships_t.x - mine.x)
-            if(touches_sun(mine.x, mine.y, angle)==True):
-                continue
+            #if(touches_sun(mine.x, mine.y, angle)==True):
+                #continue
             moves.append([mine.id, angle, max_ships_t.ships+1])
 
     return moves

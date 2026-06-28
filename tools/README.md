@@ -11,6 +11,11 @@
     - axis=0: drop a row
     - axis=1: drop a column
 
+## Numpy
+- numpy arrays store homogenous data type and store them in contiguous memory blocks - so it's fast compared to python lists
+- by default numpy operations are vector-type and is implemented element wise:
+  - data * 2: multiplies 2 to each data element in numpy, whereas in python list the data array is copied 2 times
+  - d1 + d2: element wise summation (vector summation) in numpy, whereas in python a new list is created with d2 appended after d1
 
 ## scikit-learn
 - all objects in scikit-learn's API share a consistent interface

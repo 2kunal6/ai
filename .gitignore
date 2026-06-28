@@ -2,9 +2,15 @@
 *.png
 *.pptx
 venv
+.venv
 __pycache__
 catboost_info
 .ipynb_checkpoints
 results
 bert-base-uncased
 bert-base-uncased_checkpoints
+*.jpg
+neurogolf-2026
+*.onnx
+*.onnx.data
+*.json
