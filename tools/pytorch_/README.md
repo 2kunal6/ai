@@ -19,6 +19,16 @@
 - executorch: mobile deployment
 
 ## Miscellaneous
+- Vision Transformers are performing good these days for image classification
+  - self attention mechanism capture intricate details in the images
+  - we need to transform the image to make it similar to the training data. steps:
+    - resize: resizes image keeping the aspect ratio same
+    - CenterCrop: crop the center piece to remove borders if any
+    - toTensor: convert to tensor
+    - Normalize: around some mean and standard deviation
+- modules or layers are the building blocks of the deep learning models
+  - they can be nested i.e. modules can have submodules
+  - typical models are sequential ending with a fully-connected layer of output classes
 - squeeze and unsqueeze:
   - squeeze removes dimension of value 1
   - unsqueeze adds deimension of value 1
