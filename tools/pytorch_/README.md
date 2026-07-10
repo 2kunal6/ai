@@ -1,7 +1,5 @@
 ## Intro
 - python library to build Deep Learning projects
-- Tensor:
-  - core data structure of pytorch which are multidimensional arrays, similar to numpy arrays
 - it has high-performance c++ runtime for faster inference in production
 - Capabilities:
   - fast because most of the code is built in c++ and cuda
@@ -17,6 +15,99 @@
 - torch.distributed: to run across multiple machines and GPU
 - torch.compile: optimizes model performance
 - executorch: mobile deployment
+
+## Tensors
+- core data structure of pytorch which are multidimensional arrays, similar to numpy arrays
+- compared to numpy arrays, tensors can operate very fast on GPU and can be spread across machines for computation and kept track of the computation graph that created them - which is necessary for DeepLearning
+- has interoperability with numpy
+  - tensors can be converted to numpy arrays and vice-versa efficiently
+  - by doing so we can use the vast ecosystem of python modules created around numpy
+  - the zero-copy interoparability with numpy happens because the storage system works with the python protocol buffer
+  - tensor_instance.numpy():
+    - the returned array shares the same python buffer as the tensor storage - so no cost in converting if the tensor is in CPU
+    - changing the numpy array will also change the tensor
+  - torch.from_numpy(numpy_array) - also uses the same buffer storage 
+- can be used to represent many types of data - images, time-series, sentences etc.
+- comparison: python lists or tuples are collection of objects which are individually allocated memory; whereas numpy and tensors are views over (typically) contiguous blocks of memory containing unboxed c numeric types, not python objects
+- tensors are homogenous i.e. they contain elements of the same data type
+- storing a tensor of 1 million elements of float will require 4 million contiguous bytes (a float needs 4 bytes); plus some overhead to store the dimensions
+- for a 2-d tensor if we perform t[0] then it will return a 1-d tensor which is a different view of the same underlying data
+  - t[0] does not create any new tensor
+- syntax:
+  - t[1:] -> all rows after the first; implicitly all columns
+  - t[1:, :] -> all rows after the first; all columns
+  - t[1:, 0] -> all rows after the first; 0th column
+  - t[None] -> sane as t.unsqueeze(dim = 0) i.e. adds a dimension of size 1
+- broadcasting:
+  - simplifies complex tensor ops by enabling efficient element wise computation between tensors of various shapes
+  - dimensions are compared element-eise from left to right and if they are compatible (equal or one of the dim is 1) then they can be broadcasted together
+  - [[1, 2, 3]] + 10 = [[11, 12, 13]]
+  - multiplying a tensor of shape 1x3 with 3x1 gives a tensor of shape 3x3 because they are compatible (1 is compatible with 3 and 3 is compatible with 1)
+  - when tensors are of varying dimensions then we right-align the tensor shapes
+    - when the dimensions are matching we apply the operation element wise and for dim=1 we use this value for each dimension is the other tensor
+    - ex:  2 x 1 x 3 
+               2 x 3
+           ---------
+           2 x 2 x 3
+      - here the dimension of 1 is used with all the values in the dimension 2 in the first column
+- Named Tensors:
+  - we name the dimensions like channel, height, width, batch etc. to improve readability and minimize confusion when working with tensors
+  - pytorch can align tensors by names; we can also do summation based on dimension names instead of using the integer axis values
+- data types (dtype):
+  - torch.float32 (or torch.float), torch.float64 (or torch.double), torch.complex64 (torch.cfloat), torch.bfloat16 (brain float by google), torch.int8, torch.uint8, torch.bool
+  - torch.float is default
+  - torch.double does not typically introduce improvements; whereas torch.float16 (half precision) reduces memory footprint with a minor effect on accuracy
+  - int64 is default for integer types
+  - casting: torch.tensor([1, 2]).short() or torch.tensor([1]).to(torch.double)
+- the Tensor API:
+  - for majority of ops on and between tensors there are 2 options: using torch module or as methods of a tensor object
+    - ex: torch.transpose(t, 0, 1) OR t.transpose(0, 1)
+    - there is no difference between them and can be used interchangeably
+  - groups of tensor ops:
+    - creation: tensor.ones, from_numpy
+    - indexing, slicing, mutating etc: change shape, stride like transpose for example
+    - math ops:
+      - pointwise ops: apply function elementwise like abs or cos
+      - aggregation: mean, median, etc.
+      - comparison: max, equal
+      - spectral: operations in frequency domain like hamming_window
+      - algebraic ops
+    - random sampling: randn, normal
+    - serialization: load, save
+    - parallelism: set_num_threads
+  - storage:
+    - values in tensors are stored in contagious blocks of memory (1-d array) in torch.Storage instances
+    - a tensor instance is a view of such a storage instance, which indexes storage in offset and per-dimension stride
+      - since tensor instances are views, therefore some ops like transpose, getting subtensors etc. are inexpensive because no memory allocation happens - just the tensor metadata like size, offset etc. are modified
+    - multiple tensors with different shapes might be using the same underlying storage
+    - no matter the dimension of the tensor, the underlying storage is 1-d contiguous block
+    - modifying storage values will modify the corresponding tensor
+  - methods with trailing underscore (like t.zero_()) makes changes in place while the ones without trailing underscore leaves the tensors unchanged
+  - tensor metadata size, offset and stride unambiguously define the tensor from the 1-d contiguous storage
+  - transpose also happens in higher dimension. we need to mention the 2 dimensions where the transpose should happen
+    - transpose in higher dimension means rearranging the axes
+    - required for example to convert the dimensions as per framework like pytorch expects batch, channels, height, width and tensorflow expects batch, height, width, channels
+  - contiguous tensors: 
+    - some tensor ops in pytorch like view only work on contiguous tensors
+    - we need to make a tensor contiguous by calling the contiguous function for example the transposed array which is not contiguous
+      - calling contiguous in the transposed tensor reshuffles the storage to make it contiguous as per the transposed shape
+  - tensors can be transferred to GPU to perform massively parallel fast computations
+    - all ops on the tensor will be performed by the gpu specific routines written in pytorch
+    - torch.tensor(..., device='cuda') OR t.to(device='cuda') OR t.cuda() 
+      - these returns another tensor which has the same numerical data but is stored in the RAM of the GPU
+    - in almost all cases the pytorch APIs are same for CPU and GPU
+    - if we have more than one gpu then we can choose the gpu: t.to(device='cuda:0') or t.cuda(0)
+    - once computation in GPU finishes, the result is not brought back to the CPU but a handle to the GPU tensor is provided for manipulation
+      - all future computations keeps happening on the GPU until we bring it back to the CPU explicitly
+  - pytorch integrates with NVIDIA GPU, AMD's ROCm platform, Apple silicon, google's TPU via an external library torch_xla, intel's XPU
+  - a fundamental principle of pytorch is to allow providers to create support for their hardwares without having to change the library for existing users
+- Generalized Tensors:
+  - how data is stored is separate from the tensor API and any API that fulfils a similar contract can be considered a tensor
+  - pytorch calls the right computations for that API
+- Serializing Tensors:
+  - pytorch uses pickle to serialize tensors + some dedicated serialization code
+  - torch.save(t, 'a.t') (torch.load(..)) OR save and load as file
+  - hdf5: format to save for interoperability when pytorch needs to work with other frameworks
 
 ## Miscellaneous
 - Vision Transformers are performing good these days for image classification
