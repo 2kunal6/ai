@@ -862,3 +862,20 @@
     - SGDClassifier
     - LinearSVC
     - RandomForestClassifier
+
+## Miscellaneous
+- variables:
+  - contiguous:
+    - strictly ordered, and difference between values has a mathematical meaning. Ex: difference between 30 and 35 amounts to same amount of heat difference as between 20 and 25
+    - types:
+      - ratio scale:
+        - it makes sense to say one value is twice another like 10kg is twice as heavy as 5 kg
+      - interval scale:
+        - does not have the notion of consistent difference ex. 20 degree celcius is not twice as hot as 10 degree since 0 degree does not mean 0 heat
+  - categorical:
+    - ordinal:
+      - strict ordering like continuous variable remains but mathematical difference does not make sense
+      - ex: small(0) < medium(1) < large(2) but it does not tell us how much bigger; averaging the portions of small and large does not give us a medium
+    - nominal:
+      - ordering does not make sense
+      - ex: milk, water, tea - we can randomly assign any number to any

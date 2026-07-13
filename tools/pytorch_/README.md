@@ -18,6 +18,7 @@
 
 ## Tensors
 - core data structure of pytorch which are multidimensional arrays, similar to numpy arrays
+- for pytorch neural networks takes tensors as input and generates tensors as outputs.  All ops for optimization are on tensors and all weights and biases are tensors
 - compared to numpy arrays, tensors can operate very fast on GPU and can be spread across machines for computation and kept track of the computation graph that created them - which is necessary for DeepLearning
 - has interoperability with numpy
   - tensors can be converted to numpy arrays and vice-versa efficiently
@@ -86,7 +87,7 @@
   - tensor metadata size, offset and stride unambiguously define the tensor from the 1-d contiguous storage
   - transpose also happens in higher dimension. we need to mention the 2 dimensions where the transpose should happen
     - transpose in higher dimension means rearranging the axes
-    - required for example to convert the dimensions as per framework like pytorch expects batch, channels, height, width and tensorflow expects batch, height, width, channels
+    - required for example to convert the dimensions as per framework like pytorch expects batch, channels, height, width and tensorflow expects batch, height, width, channels; now it supports multiple layouts
   - contiguous tensors: 
     - some tensor ops in pytorch like view only work on contiguous tensors
     - we need to make a tensor contiguous by calling the contiguous function for example the transposed array which is not contiguous
@@ -108,6 +109,33 @@
   - pytorch uses pickle to serialize tensors + some dedicated serialization code
   - torch.save(t, 'a.t') (torch.load(..)) OR save and load as file
   - hdf5: format to save for interoperability when pytorch needs to work with other frameworks
+- Image Data:
+  - each pixel might contain a single scalar value (grayscale) or different scalar values (typically representing different colors; or other information like depth from specialized cameras; or an alpha channel representing transparency)
+    - the scalars are typically 8 bit for consumer cameras and can be 12-16 bit for special purposes like medical imaging where sensitivity is required to differentiate in bone density, temperature, depth etc.
+  - color encoding is done using RGB
+  - reading images from directory in a batch:
+    - read in a forloop -> append to batch=[] -> torch.stack(batch) (it creates a new first dimension which is the batch dimension)
+      - here torchvision.transforms can be used to preprocess the image before appending to batch
+    - recommended: using DataLoader class
+      - this can also use the preprocessing pipeline transforms.compose
+        - ToTensor in transforms.compose automatically permutes to channel, height, width
+      - ImageFolder expects the source directory to have sub-directories which would be used as labels for those data
+- Representing Tabular data:
+  - tabular data might have different datatypes in different columns but NNs require them to be in numeric format
+  - ways to load: csv module, numpy, pandas (most time and memory efficient)
+  - np.loadtxt(wine_path, dtype=np.float32, delimiter=";", skiprows=1)
+  - extract features and labels in different tensors X and y
+  - we can use integer labels for y or one-hot encoding to convert y using torch.functional.one_hot or scatter_ method
+- Representing time-series data:
+  - for 2 years of observations we can break the data as NxCxL.  If we organize it as NxLxC then each row will represent all features, but we want a row to have a single feature
+    - N = number of days, C = other columns, L = 24 (1 observation for each hour)
+  - we can also break by 7x24 to represent each hour of the week
+  - for some models we need to make sure that there are no gaps in the data
+  - if our data is not sorted then we also need to sort it by datetime
+- Representing text:
+  - using one-hot encoding for characters or words but there may be many words and our one-hot encoding for words can be very large; using embeddings to encode words is a better approach which also tries to preserve meanings
+    - other approaches are byte-pair encoding used by sentencepiece
+    - embeddings are generally produced by neural networks trying to predict words based on nearby words
 
 ## Miscellaneous
 - Vision Transformers are performing good these days for image classification
@@ -124,7 +152,13 @@
   - squeeze removes dimension of value 1
   - unsqueeze adds deimension of value 1
     - for example if a nn expects input of dimension = 4 (batchsize, color_channels, height, width) and we just have to input it 1 image then we can unsqueeze at dimension=0 for batchsize
-- Named Tensors
 - transpose:
   - used for image view conversion 
   - need to apply contiguous after the transpose call
+- imageio vs PIL:
+  - imageio handles complex IO from different data sources and reads image directly in numpy - so good for ML
+  - PIL is good for editing images, and it reads the image in a proprietary format
+- torch.cat:
+  - concatenate tensors along an existing dimension (default 0)
+  - torch.stack adds a completely new dimension but torch.cat does not
+  - 2x3 tensor cat 2x3 give 4x3 tensor -> default dim=0; for dim=1 it gives 2x6

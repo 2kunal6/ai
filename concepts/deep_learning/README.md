@@ -23,9 +23,15 @@
   - trained on various text and image combinations to understand the relationship between the two
   - it can caption images it's never seen before because it uses embeddings of images and corresponding texts; it learns from the proximity of these embeddings
   - for inference we only need to use the image encoder and text decoder parts of the model
+- Recurrent Neural Networks
+
 
 ## Miscellaneous
 - Model Zoo: collection of pretrained libraries
   - ex: torchvision, huggingface
-  - hf's transfomers library holds a collection of transformer models
+  - hf's transformers library holds a collection of transformer models
 - multimodal model: handle different types of data modalities like text, image etc.
+- Neural Networks work best when data is roughly between 0 to 1 or -1 to 1 floating point numbers.
+  - Therefore when we load images we cast them to floats and normalize them, for example by dividing by 255 which is the max possible pixel value 
+  - another technique is to standardize the data across all RGB channels (0 mean and 1 standard deviation)
+  - we also need to do other geometric transformations like cropping, rotating, scaling etc.
