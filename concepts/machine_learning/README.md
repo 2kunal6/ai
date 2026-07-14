@@ -76,13 +76,14 @@
       - use a more complex model with more params
       - choose nice features for training
       - reduce the regularization param
-- Testing and Validation:
+- Train, Validation and Test set:
   - split your training data into training and test set and evaluate your model on the test set (which was not used for training) to get an estimate of the error rate on new cases (generalization or out-of-sample error)
   - generally 80-20 split for train and test data is considered good but depends on data size (100000 sample of test data even if it is 1% is good)
   - Hyperparameter Tuning and model selection:
     - for hyperparameter selection we can use 100 hyperparam values and train 100 times, but the generalization error in production won't be good because we used test data too many times
       - solution is to use a validation set (or hold-out set or development set). steps:
         - we train multiple models on train-set minus validation set and select the model that performs best on the validation set
+          - select the model where train and validation errors are nearly equal
         - now we train the model on train-set + validation-set to get the final model
         - evaluate this final model on test-set to estimate the generalization error
         - this is problematic if the validation set is too big or small. if validation set is small then the evaluations will be imprecise and if is big then the training set will be small. so we use repeated cross-validation using many small validation sets

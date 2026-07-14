@@ -41,7 +41,7 @@
   - t[None] -> sane as t.unsqueeze(dim = 0) i.e. adds a dimension of size 1
 - broadcasting:
   - simplifies complex tensor ops by enabling efficient element wise computation between tensors of various shapes
-  - dimensions are compared element-eise from left to right and if they are compatible (equal or one of the dim is 1) then they can be broadcasted together
+  - dimensions are compared element-wise from left to right and if they are compatible (equal or one of the dim is 1) then they can be broadcasted together
   - [[1, 2, 3]] + 10 = [[11, 12, 13]]
   - multiplying a tensor of shape 1x3 with 3x1 gives a tensor of shape 3x3 because they are compatible (1 is compatible with 3 and 3 is compatible with 1)
   - when tensors are of varying dimensions then we right-align the tensor shapes
@@ -51,6 +51,8 @@
            ---------
            2 x 2 x 3
       - here the dimension of 1 is used with all the values in the dimension 2 in the first column
+  - for each index dimension from the back, pytorch will match the dimensions - they must match or one of them should be 1 - if one of them is 1 then this value is used repeatedly with the other dimension
+  - if a tensor has more number of dimensions than the other (ex. A=4x3x2x2 multiplied by B=2x2) then the result is 4x3x2x2 - B is multiplied with the all the 12(4x3) matrices of size 2x2 of A
 - Named Tensors:
   - we name the dimensions like channel, height, width, batch etc. to improve readability and minimize confusion when working with tensors
   - pytorch can align tensors by names; we can also do summation based on dimension names instead of using the integer axis values
@@ -136,6 +138,29 @@
   - using one-hot encoding for characters or words but there may be many words and our one-hot encoding for words can be very large; using embeddings to encode words is a better approach which also tries to preserve meanings
     - other approaches are byte-pair encoding used by sentencepiece
     - embeddings are generally produced by neural networks trying to predict words based on nearby words
+- pytorch scalars: 0 dimensional tensors
+
+
+## Training
+- to optimize the parameter of the model (i.e. weights), the change in the error following a unit change in weights (i.e. the gradient of the error w.r.t. weights) is computed using the chain rule for the derivative of a composite function (backward pass)
+- linear relationship: y = wx + b
+  - the weight tells us how much an input influences the output, and the bias term tells us what the output would be if all inputs are 0
+- autograd: pytorch component to compute gradient automatically
+  - requires_grad=True in tensor T's constructor tells pytorch to track the entire family tree of tensors resulting from operations on T.  
+    - In other words any tensor that will have T as ancestor will have access to all the functions that were called to convert T to the current tensor.
+    - In case these functions are differentiable, the value of derivatives will be available in grad attribute of T
+  - initiate tensor params (with weights and biases) with requires_grad=True, then call the model and compute loss and finally backward on the loss tensor
+    - at this point the grad attribute of params contains the derivatives of the loss w.r.t. each element of params
+    - the operations are stored in a computation graph and on calling loss.backward() these operations are considered in the reverse order
+    - calling .backward() will cause the derivatives to accumulate at leaf nodes.  We need to zero gradients explicitly after using it to update the parameteres
+      - pytorch does not automatically zero the gradients because some models require accumulating these values across multiple steps 
+    - with torch.no_grad():
+          params -= learning_rate * params.grad
+      - with torch.no_grad() tells autograd to not add forward edges
+    - torch.optim module contains the optmizers like adam, adagrad, sgd, rmsprop, etc.
+      - it takes a list of params as input which it updates
+      - zero_grad zeros the grad attribute and step() updates the params as per the optimization strategy
+  - switch off autograd using torch.no_grad for example when we are not calling backward() on validation set's loss; if we don't switch off autograd then an unnecessary computation graph will be created for validation tensor
 
 ## Miscellaneous
 - Vision Transformers are performing good these days for image classification

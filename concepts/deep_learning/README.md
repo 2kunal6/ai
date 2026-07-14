@@ -35,3 +35,20 @@
   - Therefore when we load images we cast them to floats and normalize them, for example by dividing by 255 which is the max possible pixel value 
   - another technique is to standardize the data across all RGB channels (0 mean and 1 standard deviation)
   - we also need to do other geometric transformations like cropping, rotating, scaling etc.
+- Loss Function (or Cost Function):
+  - measures the difference between actual and predicted values
+- Gradient Descent: 
+- epoch: each pass of all input samples once
+  - iteration (or step): represents a single forward and backward pass of a batch (subset of input)
+- hyperparameter tuning
+  - hyperparameters refers to the fact that we are training the model's parameters
+  - hyperparameter controls how the training goes
+- optimizers: stochastic gradient descent, adam, rmsprop
+- tuning:
+  - underfitting:
+    - loss does not decrease with training
+    - means the model is not capable enough or data is not meaningful enough
+  - overfitting:
+    - loss is less in training but does not generalize well to new data
+    - training and validation error diverges
+    - solution: regularization, data augmentation
