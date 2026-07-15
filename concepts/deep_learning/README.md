@@ -1,3 +1,7 @@
+## Intro
+- Neural Networks are made of neurons which represent mathematical functions
+- Activation Functions allow us to capture non-linearity.  They introduce bumps - different values will have different slopes based on the activation function and together they help us capture the any complex non-linear of the problem at hand - Universal Approximation Theorem
+
 ## Models
 - U-net:
   - A special type of CNN that is explicitly designed for image segmentation
@@ -52,3 +56,8 @@
     - loss is less in training but does not generalize well to new data
     - training and validation error diverges
     - solution: regularization, data augmentation
+- why batching?
+  - to make max use of GPU
+  - some models make use of the statistical info in a batch to make the models better
+- 2 different ways are typically used to represent neural networks: input from left to right or from bottom to top (recent)
+  - some show activation functions, some don't

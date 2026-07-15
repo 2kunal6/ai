@@ -8,7 +8,6 @@
     - autograd uses this feature
 
 ## Implementation
-- torch.nn: has core pytorch modules like connected layers, convolution layers, activation functions, loss functions etc.
 - Dataset class: to bridge the gap between raw data into tensors so that pytorch can handle it
 - DataLoader: to load data in parallel
 - torch.optim: for optimizer classes
@@ -162,6 +161,30 @@
       - zero_grad zeros the grad attribute and step() updates the params as per the optimization strategy
   - switch off autograd using torch.no_grad for example when we are not calling backward() on validation set's loss; if we don't switch off autograd then an unnecessary computation graph will be created for validation tensor
 
+
+## torch.nn
+- torch.nn: has core pytorch modules like connected layers, convolution layers, activation functions, loss functions etc.
+- it also has the modules (building blocks) required to create various neural network architectures
+- A pytorch module is a python class deriving from the nn.Module base class
+  - a module can have one or more nn.parameter instances as attributes, which are tensors that are optimized during training (ex. weights and biases in the linear model)
+  - a module can also have one or more submodules which are also nn.Module type
+    - submodules should be top level attributes and not buried inside a list or dict, otherwise the optimizer will not be able to locate them
+    - use nn.ModuleList or nn.ModuleDict if you need them inside a list or dict
+  - ex. nn.Linear which performs affine transformation on input using weights and biases
+- nn.Module is designed to be used as a callable method i.e. it has a __call__ function.  Therefore we can call nn.Linear
+  - lm = nn.Linear()
+  - lm(data) # it calls forward() plus some other methods; although we can call forward() directly but we should not do that
+  - calling forward() directly will not execute hooks which are functions that are called at certain times during forward or backward pass, for example to execute on distributed systems. this will cause error
+  - nn.Module also provides nonlinear data flows, custom layer interactions, conditional data flow paths etc.
+- nn.Linear:
+  - this constructor accepts 3 arguments: num input layers, num output layers, bias=True(default)/False
+  - 0th dimension in the input can optionally be batch size
+  - the linear_model.parameters() recursively iterates all modules and returns as list, which is passed to the optimizer for training
+- nn.Sequential: concatenate modules like (linear + tanh activation + linear)
+  - named parameters: to see the parameters like weights and biases by names
+    - nn.Sequential accepts OrderedDict to name the parameters
+    - activation functions are not named because they are not parameters; they are just mathematical functions
+
 ## Miscellaneous
 - Vision Transformers are performing good these days for image classification
   - self attention mechanism capture intricate details in the images
@@ -175,8 +198,10 @@
   - typical models are sequential ending with a fully-connected layer of output classes
 - squeeze and unsqueeze:
   - squeeze removes dimension of value 1
-  - unsqueeze adds deimension of value 1
+  - unsqueeze adds dimension of value 1
     - for example if a nn expects input of dimension = 4 (batchsize, color_channels, height, width) and we just have to input it 1 image then we can unsqueeze at dimension=0 for batchsize
+    - suppose we have an array of size 1x10, t.unsqueeze(0) will create a tensor of shape 1x10 and t.unsqueeze(1) will create a tensor of shape 10x1
+      - for the argument dimension of unsqueeze it adds a dimension of 1, and the rest of the values are moved to the other dimension
 - transpose:
   - used for image view conversion 
   - need to apply contiguous after the transpose call
@@ -187,3 +212,4 @@
   - concatenate tensors along an existing dimension (default 0)
   - torch.stack adds a completely new dimension but torch.cat does not
   - 2x3 tensor cat 2x3 give 4x3 tensor -> default dim=0; for dim=1 it gives 2x6
+- torch.arange(start, end): provides 1-D tensor with values between >=start and <end
