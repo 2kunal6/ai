@@ -76,6 +76,7 @@
       - algebraic ops
     - random sampling: randn, normal
     - serialization: load, save
+      - save as .pt -> saves the params -> to load we will need the exact model definition
     - parallelism: set_num_threads
   - storage:
     - values in tensors are stored in contagious blocks of memory (1-d array) in torch.Storage instances
@@ -138,7 +139,19 @@
     - other approaches are byte-pair encoding used by sentencepiece
     - embeddings are generally produced by neural networks trying to predict words based on nearby words
 - pytorch scalars: 0 dimensional tensors
-
+- tensor.view()
+  - used to reshape a tensor without changing the data; imagine all data being laid out in a single line and view tells how to fold the data without changing the order of the data
+  - x = torch.tensor([1, 2, 3, 4, 5, 6])
+    - x.view(2, 3) => [[1, 2, 3]
+                       [4, 5, 6]]
+  - we can also view it in 3d
+  - number of elements must stay same. ex: tensor of length 12 can be converted to 2x5, 2x2x3 etc. but not 2x4
+  - we can use to automatically detect a dimension size using -1. ex: x.view(2, 3, -1) will convert to 2,3,2 (since 2x3x2=12)
+  - it does not rearrange data. the data stays in the same order. it simply changes how we index the data
+  - permute() swaps axes
+    - ex. x = [[1,2,3],[4,5,6]]
+    - x.view(3,2) = [[1,2],[3,4],[5,6]]
+    - x.permute(1,0)=[[1,4],[2,5],[3,6]]
 
 ## Training
 - to optimize the parameter of the model (i.e. weights), the change in the error following a unit change in weights (i.e. the gradient of the error w.r.t. weights) is computed using the chain rule for the derivative of a composite function (backward pass)
@@ -184,6 +197,84 @@
   - named parameters: to see the parameters like weights and biases by names
     - nn.Sequential accepts OrderedDict to name the parameters
     - activation functions are not named because they are not parameters; they are just mathematical functions
+- functional counterparts:
+  - pytorch has functional counterparts for every nn.Module
+  - functional means they have no internal state; parameters must be managed manually
+    - therefor it is generally used for modules which do not have state like activation functions; nn.Module is generally used for modules where state is required like Conv2d etc.
+  - ex: nn.linear > F.linear
+  - using functional or nn.Module is a matter of taste
+
+
+## Image Classification
+- torch.stack to aggregate the images in one tensor
+- linear models are not a good choice because they do not take into account the concept of nearby pixels
+- standardize the image pixels around mean and standard deviation
+- use trainLoader to train in batches
+- Convolutional Neural Networks:
+  - better than linear models because they consider the concept of nearby pixels
+  - a weighted sum of a pixel is calculated with it's nearby pixels instead of all other pixels in the image
+    - it is a linear operations since it's a weighted sum
+  - discrete convolution is defined for a 2D image as the scalar product of a weight matrix (kernel) on all the neighborhoods of the image
+  - for a multichannel image the kernel would be 3x3x3 - set of weights for every channel contributing to the output
+  - weights of the kernel are initialized randomly and are optimized using backpropagation
+  - the same kernel is used across the entire image; thus the gradients correspond to info from the entire image
+  - convolutions are translation invariant i.e. they can identify minor changes in image location like shifting the image right by 10 pixels because they operate on information in the neighborhood
+  - the number of parameters in CNN depends not on the number of pixels of the image but on the kernel size and number of kernels we decide to use
+  - pytorch implementation:
+    - nn.Conv1d for timeseries; nn.Conv2d for image; nn.Conv3d for volumes or videos
+    - nn.Conv2d:
+      - arguments: number of input features (channels), number of output features, kernel size
+        - for nn.Conv2d(3,16,4) it creates 16 matrices (filters) of size 3x4x4; and a bias of size 16
+      - more number of output features generally means more capable network because many features are detected
+  - generally kernel sizes are kept same in all directions
+  - padding: using ghost pixels
+    - padding=1 means an extra set of neighbors (with default value 0) is considered at left and top at 0,0 position
+    - for even-sized kernels we would have to pad with a different value at left and right (and top and bottom)
+    - it's generally best to stay with odd-sized kernels
+    - torch.nn.functional.pad
+    - padding is required because:
+      - keeping images before and after convolution of same size helps with simpler calculations
+      - for complex architectures like U-net where we need skip-connections we need compatible sizes for calculations
+  - kernel design:
+    - convolution kernel with all 1's will create a blurred image because each pixel will just be the average of the neighborhood
+    - edge detection: 1st column with -1, 2nd column with 0 and third column with 1
+      - different intensity vertical boundary implies high value and similar intensity vertical boundary implies 0
+      - we can design similar kernels to detect vertical boundaries, horizontal boundaries, checkerboard patterns etc.
+      - historically computer vision used to be about using various filters or their combination to highlight certain features; with deep learning we let the kernels be estimated from data in whatever way makes sense for the task at hand
+    - picking a kernel size of the image size will just be a linear affine transformation with no information about neighboring pixels
+  - downsampling: 
+    - reduce height and width of feature maps (output after being processes by a kernel) as they pass through a CNN
+    - the image becomes smaller but the network tries to keep the important information
+    - benefits: makes network faster, less memory, learn larger features
+    - methods:
+      - strided convolution: if we increase the stride the filter moves 2 steps at a time decreasing the output size
+      - maxpooling: take max of the 2x2 values
+      - average pooling: take average of the 2x2 values
+    - the first convolution layer generally increases the dimension of the data flowing through it
+  - subclassing nn.Module:
+    - for computations that the premade modules do not provide like flatten (converting 8x8x8 to 512)
+      - we can use nn.Flatten from pytorch 3.13 onwards
+    - pytorch allows us to use any computation in our model that subclasses from nn.Module
+    - nn.Module can represent entire networks or the building blocks of networks
+      - ex. convolution layer is nn.Module and the model consisting the convolution layer is also a nn.Module
+    - to implement nn.Module we need to implement forward() that takes an input and returns an output after computation
+      - additionally if we use torch operations autograd will take care of backward pass automatically
+      - nn.Module never comes with backward() since it is implicitly defined
+    - typically our computation will use other modules - premade like convolutions or customized
+      - to include these submodules we typically define them in the constructor __init__ and assign them to self for use in forward()
+      - they will at the same time hold their parameters throughout the lifetime of our module
+    - subclassing from nn.Module is similar to using nn.Sequential but in subclassing from nn.Module we explicitly implement the forward() function where we can write custom logic like flatten/view before passing the output of a convolution layer to the next linear layer 
+  - Model Design:
+    - Regularization:
+      - for regularization we can just penalize the weights:
+        - l2_lambda = 0.001 
+        - l2_norm = sum(p.pow(2.0).sum() for p in model.parameters())
+        - loss = loss + l2_lambda * l2_norm
+        - SGD already has the weight decay parameter
+      - dropout:
+        - add this after a convolution module: self.conv1_dropout = nn.Dropout2d(p=0.4) # drop a node with 0.4 probability
+  - building deeper models: ResBlock
+
 
 ## Miscellaneous
 - Vision Transformers are performing good these days for image classification
@@ -213,3 +304,9 @@
   - torch.stack adds a completely new dimension but torch.cat does not
   - 2x3 tensor cat 2x3 give 4x3 tensor -> default dim=0; for dim=1 it gives 2x6
 - torch.arange(start, end): provides 1-D tensor with values between >=start and <end
+- torchvision.datasets submodule provides access to the most popular computer vision datasets like MNIST, Fashin-MNIST, CIFAR-100 etc.
+  - the dataset is returned as a subclass of torch.utils.data.Dataset
+- numel: to count number of parameters
+- to compute in GPU we need to move the model, the parameters, and data to the gpu
+  - In Module.to, the module instance is modified in place.  But Tensor.to is out of place, returning a new tensor.
+  - pytorch operators do not support mixing CPU and GPU inputs

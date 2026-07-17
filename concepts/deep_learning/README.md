@@ -61,3 +61,13 @@
   - some models make use of the statistical info in a batch to make the models better
 - 2 different ways are typically used to represent neural networks: input from left to right or from bottom to top (recent)
   - some show activation functions, some don't
+- softmax, sigmoid, MSELoss, BCELoss, Negative Log Likelihood, cross entropy loss
+- fully connected networks are not translation invariant
+- it is a good idea to gradually reduce the number of parameters moving gradually to the output layer 
+- kernel trick: projecting data to higher dimension where we can perform simpler operations (like linear operations) on it 
+  - ex: the first convolution layer which increases the dimension of the data
+- regularization:
+  - l1 or l2 norm
+  - dropout
+  - batch normalization
+  - skip connections

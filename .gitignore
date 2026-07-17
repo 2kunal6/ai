@@ -18,3 +18,5 @@ neurogolf-2026
 .idea
 1342-0.txt
 *.iml
+resources
+*.pt
