@@ -284,6 +284,12 @@
 - nn.Embedding to embed
   - they start with random values and are trained during backpropagation allowing the model to learn optimal representations for our task
 
+## Diffusion Models
+- for image synthesis
+- conceptually same as text generation in the sense that use the underlying data distribution to create model for image generation
+- learn probability of the underlying dataset to generate images that could plausibly belong to the original dataset
+
+
 ## Miscellaneous
 - Vision Transformers are performing good these days for image classification
   - self attention mechanism capture intricate details in the images
@@ -319,3 +325,4 @@
   - In Module.to, the module instance is modified in place.  But Tensor.to is out of place, returning a new tensor.
   - pytorch operators do not support mixing CPU and GPU inputs
 - nn.Embedding module
+- torch.linspace: returns a 1-d tensor of evenly spaced values within an interval

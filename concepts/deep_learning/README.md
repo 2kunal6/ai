@@ -11,6 +11,7 @@
   - This is how stable diffusion creates images from text prompts
   - Steps:
     - Forward Diffusion: take a clear image of a cat for example, and keep adding noise to it until it becomes pure noise 
+      - 
     - Reverse Diffusion: The model learns to reverse the noising until the original value is recovered
   - GANs generate directly but here it images are not generated directly, it generates images by removing noise
   - Training:
@@ -21,6 +22,7 @@
   - Inpainting: fill missing/masked part of an image; masking can be done based on regions
   - diffusion inpainting: add noise in the masked region only; denoise; replace with prompt image
     - negative_prompt: what not to do; example - blurry, red..
+  - Better than earlier models like Variational Autoencoders and GANs for image generation
 - BLIP:
   - image to text model 
   - multimodal
@@ -29,7 +31,14 @@
   - for inference we only need to use the image encoder and text decoder parts of the model
 - Recurrent Neural Networks
 - Transformers:
-  
+- VAE:
+  - encoder: compress image into a low dimensional latent representation
+  - decoder: reconstruct original data from the latent representation
+  - to generate new images, we can remove the encoder and pass noise to decoder
+- GANs:
+  - Generator: generates data from noise to fool the discriminator
+  - Discriminator: tries to distinguish between original and noised data
+  - once trained against each other, generator can be used to create new data
 
 ## Miscellaneous
 - Model Zoo: collection of pretrained libraries

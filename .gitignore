@@ -10,6 +10,7 @@ results
 bert-base-uncased
 bert-base-uncased_checkpoints
 *.jpg
+*.png
 neurogolf-2026
 *.onnx
 *.onnx.data
