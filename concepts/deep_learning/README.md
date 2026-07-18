@@ -28,7 +28,8 @@
   - it can caption images it's never seen before because it uses embeddings of images and corresponding texts; it learns from the proximity of these embeddings
   - for inference we only need to use the image encoder and text decoder parts of the model
 - Recurrent Neural Networks
-
+- Transformers:
+  
 
 ## Miscellaneous
 - Model Zoo: collection of pretrained libraries

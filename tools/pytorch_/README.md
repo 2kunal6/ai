@@ -276,6 +276,14 @@
   - building deeper models: ResBlock
 
 
+## Transformers
+- use statistical information from existing data to create new data.  Ex: if in training data 2 characters (c1, c2) appear together more frequently than another pair (c1, c3) then the generation probability of c2 after c1 will be higher than c3
+- target sequences are created by shifting the input sequences by one character/word
+  - ex: given "ros", the next character should be "e"; so input = "rose" and target = "ose" for corresponding characters 
+- pad input and target sequences to the same length (to the longest name) to facilitate processing for our model
+- nn.Embedding to embed
+  - they start with random values and are trained during backpropagation allowing the model to learn optimal representations for our task
+
 ## Miscellaneous
 - Vision Transformers are performing good these days for image classification
   - self attention mechanism capture intricate details in the images
@@ -310,3 +318,4 @@
 - to compute in GPU we need to move the model, the parameters, and data to the gpu
   - In Module.to, the module instance is modified in place.  But Tensor.to is out of place, returning a new tensor.
   - pytorch operators do not support mixing CPU and GPU inputs
+- nn.Embedding module
