@@ -236,7 +236,7 @@
   - drawbacks: 
     - this criteria is not standardized; open source tools like MLFlow, Ragas, llamaindex use different scoring systems
     - it's probabilistic - so not reliable; if the AI judge model changes it might start providing higher scores to our app without our app changing -> false
-    - higher cost: we might have to make multiple calls for jedgement
+    - higher cost: we might have to make multiple calls for judgement
       - we can reduce cost by using weaker models for AI judge
       - spot-checking: validate only a subset of results
     - biases: 
@@ -325,7 +325,7 @@
   - steps:
     - evaluate all components in the system
       - evaluate at different levels: per task, per turn, per intermediate output; because a task like pdf extractor might extract wrong text and our model might be working good. evaluating only final output might give us the wrong sense that the model is working badly
-        - a turn can cosist of multiple steps 
+        - a turn can consist of multiple steps 
         - turn based evaluation evaluates the quality of each output whereas task based evaluation evaluates whether the task was accomplished or not.  Also, it can evaluate how many turns it takes to complete the task? 2 vs 20 turns make a huge difference
           - it can be hard to find the boundary of a task. we can use the 20 questions benchmark to define a task
     - create an evaluation guideline:
@@ -844,3 +844,4 @@
   - biases: leniency, position bias, preference bias etc.
   - degenerate feedback loop: we get feedback for the things we show 
     - if user clicks the first video they see it might suggest that video is good and it will come as a first suggestion more, and the other videos will miss the chance to appear first
+

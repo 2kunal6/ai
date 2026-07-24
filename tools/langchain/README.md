@@ -77,6 +77,9 @@
     - a single orchestrator agent delegates tasks to sub-agents
     - in langchain we can add agents as tools to the main agent
       - these tools call the subagents inside the function as sub_agent_x.invoke(...)
+    - we can use inexpensive models for some simple tasks to save cost
+    - we can use specific models for specific tasks that they are good at like language understanding, math, etc.
+    - modular design is easy to maintain and to add new features in the future
   - Middleware:
     - let's us intercept and customize the agent's execution at every step
     - Middleware is a catchall term that we use for functions that we can insert the loops (agent <-> llm <-> tool calling loops)
@@ -89,7 +92,7 @@
       - we can summarize the previous conversations so as not to overflow the context window
     - HumanInTheLoopMiddleware:
       - to ask human to approve/reject sensitive actions before performing them
-      - the arguments to this is the list of tools we want to interrupton before performing the action
+      - the arguments to this is the list of tools we want to interruption before performing the action
       - on being interrupted we can invoke the agent again with our decision to approve/reject the tool call using the Command function
         - we need to send the same thread id in the config param to make sure it approves/rejects the same thread that's being interrupted on
         - we can also edit and approve the edited version. the edited version can be specified using the name of the tool and the new arguments we want to call the tool with
